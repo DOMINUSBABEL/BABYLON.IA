@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import fs from 'fs';
+import fsPromises from 'fs/promises';
 import path from 'path';
 
 /**
@@ -11,7 +12,7 @@ export async function processTask(prompt, updateProgress) {
         // Fase 1: TESIS (Asimilación)
         updateProgress("Tesis (Iniciando): Analizando la directiva y cargando contexto local...");
         
-        setTimeout(() => {
+        setTimeout(async () => {
             // Fase 2: ANTÍTESIS (Ejecución y Resolución de Conflictos)
             updateProgress("Antítesis (Ejecución): Buscando contexto en el sistema de archivos y evaluando Ley Cero...");
             
@@ -19,10 +20,11 @@ export async function processTask(prompt, updateProgress) {
             const babiloniaPath = "C:\\Users\\jegom\\OneDrive\\Desktop\\Investigaciones\\geist\\Sintesis_Babilonia_China";
             let knowledgeStatus = "No verificado";
             
-            if (fs.existsSync(babiloniaPath)) {
-                const subdirs = fs.readdirSync(babiloniaPath);
+            try {
+                await fsPromises.access(babiloniaPath);
+                const subdirs = await fsPromises.readdir(babiloniaPath);
                 knowledgeStatus = `Base de datos conectada. ${subdirs.length} directorios de conocimiento indexados.`;
-            } else {
+            } catch (err) {
                 knowledgeStatus = "Base de datos no encontrada. Operando en modo de inferencia pura.";
             }
 
