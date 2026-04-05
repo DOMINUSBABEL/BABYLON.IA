@@ -9,7 +9,7 @@ import { processTask } from './agent_core.js';
  * Inicializa el cliente de WhatsApp y se conecta a la sesión.
  * Incluye funcionalidades completas de lectura de archivos, status y bucle dialéctico.
  */
-export function initWhatsAppClient() {
+export function initWhatsAppClient(agentEvents = null) {
     console.log(chalk.cyan('Inicializando el navegador Headless de WhatsApp Web (puede tomar unos segundos)...'));
     
     const client = new Client({
@@ -22,6 +22,19 @@ export function initWhatsAppClient() {
     client.on('qr', (qr) => {
         console.log(chalk.cyanBright('\n[!] Escanea el código QR con tu WhatsApp (Dispositivos Vinculados) para enlazar la conciencia:'));
         qrcode.generate(qr, { small: true });
+        
+        // Emitir el QR vía WebSocket al dashboard (convirtiendo a data URL en base64 para <img>)
+        if (agentEvents) {
+            import('qrcode').then(qrcodeModule => {
+                 qrcodeModule.toDataURL(qr, (err, url) => {
+                     if (!err) {
+                         agentEvents.emit('qr_code', url);
+                     }
+                 });
+            }).catch(err => {
+                console.error('Error importando el módulo "qrcode" para el dashboard:', err.message);
+            });
+        }
     });
 
     client.on('ready', () => {
@@ -31,6 +44,10 @@ export function initWhatsAppClient() {
         console.log(chalk.gray('  - !geist status          : Reporte de salud del motor OpenClaw y Gemini.'));
         console.log(chalk.gray('  - !geist enviar <ruta>   : Extrae y envía un archivo local a tu WhatsApp.'));
         console.log(chalk.magentaBright('\nEl Agente está en línea y a la espera de directivas...'));
+        
+        if (agentEvents) {
+            agentEvents.emit('whatsapp_ready');
+        }
     });
 
     client.on('message_create', async (msg) => {
