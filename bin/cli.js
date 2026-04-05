@@ -18,8 +18,12 @@ dotenv.config({ path: path.join(rootDir, '.env') });
 
 import CFonts from 'cfonts';
 import chalk from 'chalk';
+import gradient from 'gradient-string';
 
-function showBanner() {
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function showBanner() {
+    console.clear();
     CFonts.say('BABYLON.IA', {
         font: 'block',              // define the font face
         align: 'center',            // define text alignment
@@ -35,29 +39,47 @@ function showBanner() {
         env: 'node'                 // define the environment cfonts is being executed in
     });
 
-    // Impresionante Torre de Babel ASCII Art
-    console.log(chalk.cyan(`
-                             /\\
-                            /  \\
-                           /    \\
-                          /      \\
-                         /________\\
-                        /          \\
-                       /____________\\
-                      /              \\
-                     /________________\\
-                    /                  \\
-                   /____________________\\
-                  /                      \\
-                 /________________________\\
-                /                          \\
-               /____________________________\\
-              /                              \\
-             /________________________________\\
-            /                                  \\
-           /____________________________________\\
-    `));
-    console.log(chalk.yellow.bold('          ::: ARCHITECTURE GEIST // OMNI-CHANNEL :::\n'));
+    const tower = [
+        "                                    .::::.                                      ",
+        "                                   /++++++\\                                     ",
+        "                                  /++++++++\\                                    ",
+        "                                 |==========|                                   ",
+        "                                /++++++++++++\\                                  ",
+        "                               /++++++++++++++\\                                 ",
+        "                              |================|                                ",
+        "                             /++++++++++++++++++\\                               ",
+        "                            /++++++++++++++++++++\\                              ",
+        "                           |======================|                             ",
+        "                          /++++++++++++++++++++++++\\                            ",
+        "                         /++++++++++++++++++++++++++\\                           ",
+        "                        |============================|                          ",
+        "                       /++++++++++++++++++++++++++++++\\                         ",
+        "                      /++++++++++++++++++++++++++++++++\\                        ",
+        "                     |==================================|                       ",
+        "                    /++++++++++++++++++++++++++++++++++++\\                      ",
+        "                   /++++++++++++++++++++++++++++++++++++++\\                     ",
+        "                  |========================================|                    ",
+        "                 /++++++++++++++++++++++++++++++++++++++++++\\                   ",
+        "                /++++++++++++++++++++++++++++++++++++++++++++\\                  ",
+        "               |==============================================|                 ",
+        "              /++++++++++++++++++++++++++++++++++++++++++++++++\\                ",
+        "             /++++++++++++++++++++++++++++++++++++++++++++++++++\\               ",
+        "            |====================================================|              ",
+        "           /++++++++++++++++++++++++++++++++++++++++++++++++++++++\\             ",
+        "          /++++++++++++++++++++++++++++++++++++++++++++++++++++++++\\            ",
+        "         |==========================================================|           "
+    ];
+
+    // Gradiente dinámico de Cyan a Oro pasando por Azul Profundo
+    const cyberGradient = gradient(['#00ffff', '#00aaff', '#ffd700']); 
+
+    for (let line of tower) {
+        console.log(cyberGradient(line));
+        await sleep(40); // Delay para la animación tipo escaneo
+    }
+
+    console.log(chalk.yellow.bold('\\n          ::: ARCHITECTURE GEIST // OMNI-CHANNEL :::\\n'));
+    await sleep(300);
 }
 
 program
@@ -69,15 +91,15 @@ program
   .command('onboard')
   .description('Inicia la secuencia de configuración interactiva del agente.')
   .action(async () => {
-    showBanner();
+    await showBanner();
     await runOnboard();
   });
 
 program
   .command('gateway')
   .description('Inicia el motor principal y las plataformas activadas en el Onboarding, junto al servidor web.')
-  .action(() => {
-    showBanner();
+  .action(async () => {
+    await showBanner();
     
     if (!fs.existsSync(path.join(rootDir, '.env'))) {
       console.warn(chalk.yellow('Advertencia: No se encontró el archivo .env. Por favor, ejecuta "babylonia onboard" primero.'));
