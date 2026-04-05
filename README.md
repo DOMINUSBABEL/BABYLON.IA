@@ -55,22 +55,22 @@ The system is designed for deployment on any Node.js environment, including low-
 3. **Run the Onboarding Configuration:**
    This interactive menu sets up the agent, selects the AI model (including local Ollama models), links platforms (WhatsApp, Telegram, X, Web), creates the Sandbox workspace, and configures the deployment environment (Desktop vs. Mobile Terminal).
    ```bash
-   babylon.ia onboard
+   babylonia onboard
    ```
 
 4. **Start the BABYLON.IA Gateway:**
    ```bash
-   babylon.ia gateway
+   babylonia gateway
    ```
 
 5. **Open the Web Dashboard:**
    ```bash
-   babylon.ia dashboard
+   babylonia dashboard
    ```
 
 ## 4. Usage Protocol
 
-Upon execution of `babylon.ia gateway`, the system starts the selected platforms based on your `.env` configuration.
+Upon execution of `babylonia gateway`, the system starts the selected platforms based on your `.env` configuration.
 
 1. **Link Devices:** Scan the QR code using WhatsApp or start a chat with your configured Telegram Bot. Alternatively, open the Web Dashboard.
 2. **Issue Directives:** Send a command to the agent.
