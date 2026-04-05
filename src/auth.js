@@ -23,12 +23,3 @@ export function getGeminiOAuthToken() {
     }
 }
 
-/**
- * Función (mock) para renovar el token. 
- * En una implementación real con google-auth-library se utilizaría el refresh_token para obtener un nuevo access_token.
- */
-export function refreshGeminiToken(creds) {
-    // Si el access_token está vencido, se debe usar la API de Google OAuth2 para renovarlo con el refresh_token.
-    // Esta función está pensada para integrarse con '@google/generative-ai' o la librería OAuth de Google.
-    return creds;
-}
