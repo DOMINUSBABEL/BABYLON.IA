@@ -23,22 +23,38 @@ export function initWhatsAppClient(agentEvents = null) {
     let executablePath = undefined;
 
     if (process.env.ENVIRONMENT === 'mobile_terminal') {
-        console.log(chalk.yellow('[Termux Mode] Aplicando configuraciones de bajo consumo de memoria...'));
+        console.log(chalk.yellow('[Termux Mode] Aplicando configuraciones EXTREMAS de bajo consumo de memoria para Android...'));
         puppeteerArgs.push(
             '--disable-dev-shm-usage',
             '--disable-accelerated-2d-canvas',
             '--no-first-run',
             '--no-zygote',
             '--single-process', // <- Importante para entornos móviles restrictivos
-            '--disable-gpu'
+            '--disable-gpu',
+            '--disable-extensions',
+            '--disable-software-rasterizer',
+            '--disable-background-networking',
+            '--disable-background-timer-throttling',
+            '--disable-client-side-phishing-detection',
+            '--disable-default-apps',
+            '--disable-hang-monitor',
+            '--disable-popup-blocking',
+            '--disable-prompt-on-repost',
+            '--disable-sync',
+            '--disable-translate',
+            '--metrics-recording-only',
+            '--no-default-browser-check',
+            '--safebrowsing-disable-auto-update',
+            '--mute-audio',
+            '--blink-settings=imagesEnabled=false' // <- Deshabilita la carga de imágenes para ahorrar MUCHÍSIMA RAM
         );
         // En Termux a menudo se necesita instalar Chromium manualmente y especificar su ruta.
         // Si el usuario tiene CHROME_BIN seteado o estamos en termux, intentamos usar una ruta común.
         executablePath = process.env.CHROME_BIN || process.env.PUPPETEER_EXECUTABLE_PATH || '/data/data/com.termux/files/usr/bin/chromium-browser';
         
         if (!fs.existsSync(executablePath)) {
-            console.log(chalk.red(`[Advertencia Termux] Chromium no encontrado en ${executablePath}. Asegúrate de tenerlo instalado: pkg install chromium`));
-            executablePath = undefined; // Dejar que puppeteer intente descargado
+            console.log(chalk.red(`[Advertencia Termux] Chromium nativo no encontrado en ${executablePath}. Asegúrate de haber ejecutado install_android.sh o: pkg install chromium`));
+            executablePath = undefined; // Dejar que puppeteer intente usar el descargado, aunque probablemente falle en termux
         }
     }
 

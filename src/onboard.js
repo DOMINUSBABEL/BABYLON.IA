@@ -22,27 +22,44 @@ export async function runOnboard() {
       geminiApiKey = await input({ message: 'Introduce tu API Key de Gemini:' });
   }
 
-  // 2. Select Model
-  const model = await select({
-    message: 'Selecciona el modelo cognitivo a utilizar:',
+  // 2.5 Select Environment & OS
+  const environment = await select({
+    message: 'Selecciona tu Entorno/OS de despliegue (optimiza los recursos y modelos sugeridos):',
     choices: [
-      { name: 'gemini-3.1-pro-preview (Súper-Inteligencia, máximo razonamiento)', value: 'gemini-3.1-pro-preview' },
-      { name: 'gemini-3.0-pro (Avanzado, reasoning superior)', value: 'gemini-3.0-pro' },
-      { name: 'gemini-2.5-pro (Avanzado, razonamiento complejo)', value: 'gemini-2.5-pro' },
-      { name: 'gemini-2.5-flash (Rápido, respuestas instantáneas)', value: 'gemini-2.5-flash' },
-      { name: 'gemini-2.0-flash-lite-preview-02-05 (Experimental)', value: 'gemini-2.0-flash-lite-preview-02-05' },
-      { name: 'ollama:gemma2 (Local Open Source - Optimizado)', value: 'ollama:gemma2' },
-      { name: 'ollama:qwen2.5 (Local Open Source - Rápido)', value: 'ollama:qwen2.5' }
+      { name: 'Android (Termux) - Bajo consumo extremo para móviles (Ej. Honor X6c)', value: 'mobile_terminal' },
+      { name: 'Windows - Modo Desktop estándar', value: 'desktop_windows' },
+      { name: 'macOS / iOS (iSH) - Apple Silicon / x86_64', value: 'desktop_mac' },
+      { name: 'Linux - Servidor o Desktop', value: 'desktop_linux' }
     ]
   });
 
-  // 2.5 Select Environment
-  const environment = await select({
-    message: 'Selecciona el entorno de despliegue (afecta el consumo de recursos y dependencias de UI):',
-    choices: [
-      { name: 'Desktop (PC/Mac/Linux) - Modo estándar', value: 'desktop' },
-      { name: 'Mobile Terminal (Termux/iSH en Android/iOS) - Bajo consumo, Puppeteer ligero', value: 'mobile_terminal' }
-    ]
+  // Determina el flag simplificado para lógica interna
+  const envSimplified = environment === 'mobile_terminal' ? 'mobile_terminal' : 'desktop';
+
+  // 2. Select Model based on Environment
+  console.log(chalk.gray(`\nSugerencia: Para tu entorno seleccionado (${environment}), se recomiendan opciones marcadas con [Recomendado]`));
+
+  const modelChoices = [
+      { name: 'gemini-2.0-flash-lite-preview-02-05 (OAUTH CLI - Ultra Ligero) [Recomendado Android]', value: 'gemini-2.0-flash-lite-preview-02-05' },
+      { name: 'gemini-3.1-pro-preview (OAUTH CLI - Súper-Inteligencia, máximo razonamiento)', value: 'gemini-3.1-pro-preview' },
+      { name: 'gemini-3.0-pro (OAUTH CLI - Avanzado, reasoning superior)', value: 'gemini-3.0-pro' },
+      { name: 'gemini-2.5-pro (OAUTH CLI - Avanzado, razonamiento complejo)', value: 'gemini-2.5-pro' },
+      { name: 'gemini-2.5-flash (OAUTH CLI - Rápido, respuestas instantáneas)', value: 'gemini-2.5-flash' },
+  ];
+
+  if (environment === 'mobile_terminal') {
+      modelChoices.push({ name: 'ollama:qwen2.5:0.5b / llama3.2:1b (Local Open Source - Ultra Cuantizado para Android)', value: 'ollama:qwen2.5:0.5b' });
+  } else if (environment === 'desktop_mac') {
+      modelChoices.push({ name: 'mlx:llama3 (Apple MLX Local Open Source - Optimizado para M1/M2/M3)', value: 'mlx:llama3' });
+      modelChoices.push({ name: 'ollama:gemma2 (Local Open Source - Vía Ollama Mac)', value: 'ollama:gemma2' });
+  } else {
+      modelChoices.push({ name: 'ollama:gemma2 (Local Open Source - Optimizado Windows/Linux)', value: 'ollama:gemma2' });
+      modelChoices.push({ name: 'ollama:qwen2.5 (Local Open Source - Rápido Windows/Linux)', value: 'ollama:qwen2.5' });
+  }
+
+  const model = await select({
+    message: 'Selecciona el modelo cognitivo a utilizar:',
+    choices: modelChoices
   });
 
   // 3. Platform integrations
@@ -95,7 +112,8 @@ export async function runOnboard() {
   const envPath = path.join(rootDir, '.env');
   const envContent = `
 # Configuración generada por babylon.ia onboard
-ENVIRONMENT=${environment}
+ENVIRONMENT=${envSimplified}
+OS_TARGET=${environment}
 GEMINI_MODEL=${model}
 USE_GEMINI_CLI_OAUTH=${linkGeminiCLI ? 'true' : 'false'}
 GEMINI_API_KEY=${geminiApiKey}

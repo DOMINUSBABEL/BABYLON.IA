@@ -102,33 +102,44 @@ The system is designed for deployment on any Node.js environment, including low-
 
 ### 5.2 Installation Steps
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/DOMINUSBABEL/BABYLON.IA.git
-   cd BABYLON.IA
-   ```
+**1. Clone the repository:**
+```bash
+git clone https://github.com/DOMINUSBABEL/BABYLON.IA.git
+cd BABYLON.IA
+```
 
-2. **Install dependencies and the CLI globally:**
-   ```bash
-   npm install
-   npm link
-   ```
+**2. Automatic Installation (1-Command per Environment):**
 
-3. **Run the Onboarding Configuration:**
-   This interactive menu sets up the agent, selects the AI model (including local Ollama models), links platforms (WhatsApp, Telegram, X, Web), creates the Sandbox workspace, and configures the deployment environment (Desktop vs. Mobile Terminal).
-   ```bash
-   babylonia onboard
-   ```
+BABYLON.IA is optimized for cross-platform deployment. Use the appropriate command for your OS:
 
-4. **Start the BABYLON.IA Gateway:**
-   ```bash
-   babylonia gateway
-   ```
+*   **Android (Termux) - Optimized for Low Resources (e.g., Honor X6c):**
+    ```bash
+    bash install_android.sh
+    ```
+*   **Windows:**
+    ```powershell
+    .\install.ps1
+    ```
+*   **macOS / iOS (iSH) / Linux:**
+    ```bash
+    npm install && npm link
+    ```
 
-5. **Open the Web Dashboard:**
-   ```bash
-   babylonia dashboard
-   ```
+**3. Run the Onboarding Configuration:**
+This interactive menu sets up the agent, selects the AI model (including OS-specific local models and the primary Gemini Auth-Bridge), links platforms, creates the Sandbox workspace, and configures the deployment environment.
+```bash
+babylonia onboard
+```
+
+**4. Start the BABYLON.IA Gateway:**
+```bash
+babylonia gateway
+```
+
+**5. Open the Web Dashboard:**
+```bash
+babylonia dashboard
+```
 
 ---
 
