@@ -16,8 +16,52 @@ const rootDir = path.resolve(__dirname, '..');
 // Cargar variables de entorno
 dotenv.config({ path: path.join(rootDir, '.env') });
 
+import CFonts from 'cfonts';
+import chalk from 'chalk';
+
+function showBanner() {
+    CFonts.say('BABYLON.IA', {
+        font: 'block',              // define the font face
+        align: 'center',            // define text alignment
+        colors: ['cyan', 'yellow'], // define all colors
+        background: 'transparent',  // define the background color
+        letterSpacing: 1,           // define letter spacing
+        lineHeight: 1,              // define the line height
+        space: true,                // define if the output text should have empty lines on top and on the bottom
+        maxLength: '0',             // define how many character can be on one line
+        gradient: false,            // define your two gradient colors
+        independentGradient: false, // define if you want to recalculate the gradient for each new line
+        transitionGradient: false,  // define if this is a transition between colors directly
+        env: 'node'                 // define the environment cfonts is being executed in
+    });
+
+    // Impresionante Torre de Babel ASCII Art
+    console.log(chalk.cyan(`
+                             /\\
+                            /  \\
+                           /    \\
+                          /      \\
+                         /________\\
+                        /          \\
+                       /____________\\
+                      /              \\
+                     /________________\\
+                    /                  \\
+                   /____________________\\
+                  /                      \\
+                 /________________________\\
+                /                          \\
+               /____________________________\\
+              /                              \\
+             /________________________________\\
+            /                                  \\
+           /____________________________________\\
+    `));
+    console.log(chalk.yellow.bold('          ::: ARCHITECTURE GEIST // OMNI-CHANNEL :::\n'));
+}
+
 program
-  .name('babylon.ia')
+  .name('babylonia')
   .description('Agente Autónomo Multi-Canal (WhatsApp, Telegram, X, Web) con Arquitectura Geist')
   .version('1.0.0');
 
@@ -25,6 +69,7 @@ program
   .command('onboard')
   .description('Inicia la secuencia de configuración interactiva del agente.')
   .action(async () => {
+    showBanner();
     await runOnboard();
   });
 
@@ -32,8 +77,10 @@ program
   .command('gateway')
   .description('Inicia el motor principal y las plataformas activadas en el Onboarding, junto al servidor web.')
   .action(() => {
+    showBanner();
+    
     if (!fs.existsSync(path.join(rootDir, '.env'))) {
-      console.warn('Advertencia: No se encontró el archivo .env. Por favor, ejecuta "babylon.ia onboard" primero.');
+      console.warn(chalk.yellow('Advertencia: No se encontró el archivo .env. Por favor, ejecuta "babylonia onboard" primero.'));
     }
 
     console.log('Iniciando BABYLON.IA Gateway...');

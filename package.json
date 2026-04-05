@@ -4,7 +4,7 @@
   "description": "Agente Autónomo Multi-Canal (WhatsApp + Gemini OAuth) con Arquitectura Geist",
   "main": "index.js",
   "bin": {
-    "babylon.ia": "./bin/cli.js"
+    "babylonia": "./bin/cli.js"
   },
   "type": "module",
   "scripts": {
@@ -14,6 +14,7 @@
   "license": "MIT",
   "dependencies": {
     "@inquirer/prompts": "^8.3.2",
+    "cfonts": "^3.3.1",
     "chalk": "^5.3.0",
     "commander": "^14.0.3",
     "dotenv": "^17.4.1",

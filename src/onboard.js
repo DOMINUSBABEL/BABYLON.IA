@@ -115,5 +115,5 @@ TWITTER_BEARER_TOKEN=${twitterBearer}
   fs.writeFileSync(envPath, envContent, 'utf-8');
   console.log(chalk.green(`\n[✓] Configuración guardada exitosamente en ${envPath}`));
   console.log(chalk.magenta(`\nEl Agente BABYLON.IA está configurado. Inicia el motor usando:`));
-  console.log(chalk.cyan(`  babylon.ia gateway\n`));
+  console.log(chalk.cyan(`  babylonia gateway\n`));
 }
