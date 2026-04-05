@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import fs from 'fs';
-import path from 'path';
 
 /**
  * Simula y estructura la conexión con el motor OpenClaw y el LLM.
