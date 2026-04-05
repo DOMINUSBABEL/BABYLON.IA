@@ -5,6 +5,12 @@ import chalk from 'chalk';
 import fs from 'fs';
 import { processTask } from './agent_core.js';
 
+// Configuración de Seguridad: Lista Blanca de Números Autorizados
+// Agrega aquí los IDs de WhatsApp (ej. '1234567890@c.us') que tienen permiso para ejecutar comandos.
+const AUTHORIZED_NUMBERS = [
+    // 'tu_numero@c.us'
+];
+
 /**
  * Inicializa el cliente de WhatsApp y se conecta a la sesión.
  * Incluye funcionalidades completas de lectura de archivos, status y bucle dialéctico.
@@ -79,8 +85,11 @@ export function initWhatsAppClient(agentEvents = null) {
         // Ignora mensajes vacíos
         if (!msg.body) return;
 
-        // Verifica si el mensaje contiene el comando trigger (funciona si te lo envías a ti mismo o a un grupo)
-        if (msg.body.startsWith('!geist') || (msg.fromMe && msg.body.startsWith('!geist'))) {
+        // Control de Autorización: Solo el dueño (fromMe) o números en la lista blanca pueden ejecutar !geist
+        const isAuthorized = msg.fromMe || AUTHORIZED_NUMBERS.includes(msg.from);
+
+        // Verifica si el mensaje contiene el comando trigger
+        if (msg.body.startsWith('!geist') && isAuthorized) {
             console.log(chalk.magenta(`\n[+] Tesis Recibida [${msg.from}]: ${msg.body}`));
             const commandStr = msg.body.replace('!geist', '').trim();
             
