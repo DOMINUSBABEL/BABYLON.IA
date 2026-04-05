@@ -9,7 +9,12 @@ import events from 'events';
 // Submódulos del agente
 import { getGeminiOAuthToken } from './auth.js';
 import { initWhatsAppClient } from './whatsapp.js';
+import { initTelegramBot } from './telegram.js';
+import { initTwitterBot } from './twitter.js';
 import { processTask } from './agent_core.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -97,13 +102,33 @@ server.listen(PORT, async () => {
     if (process.env.BABYLON_MODE === 'gateway') {
         const spinner = (await import('ora')).default('Verificando Conciencia Geist y Credenciales OAuth de Gemini...').start();
         try {
-            const creds = getGeminiOAuthToken();
-            spinner.succeed(chalk.green(`Conciencia enlazada. Token OAuth detectado.`));
+            if (process.env.USE_GEMINI_CLI_OAUTH !== 'false') {
+                const creds = getGeminiOAuthToken();
+                spinner.succeed(chalk.green(`Conciencia enlazada. Token OAuth detectado.`));
+            } else if (process.env.GEMINI_API_KEY) {
+                spinner.succeed(chalk.green(`Conciencia enlazada vía API Key.`));
+            } else {
+                spinner.warn(chalk.yellow(`No se detectó configuración de autenticación, el agente podría fallar al procesar tareas.`));
+            }
             
-            console.log(chalk.cyanBright('\n[!] Iniciando Motor de Comunicación (WhatsApp Web)...'));
+            const platforms = (process.env.ENABLED_PLATFORMS || 'whatsapp,web').split(',');
+
+            if (platforms.includes('whatsapp')) {
+                console.log(chalk.cyanBright('\n[!] Iniciando Motor de Comunicación (WhatsApp Web)...'));
+                initWhatsAppClient(agentEvents);
+            }
+
+            if (platforms.includes('telegram')) {
+                initTelegramBot(process.env.TELEGRAM_BOT_TOKEN);
+            }
+
+            if (platforms.includes('twitter')) {
+                initTwitterBot(process.env.TWITTER_BEARER_TOKEN);
+            }
             
-            // Pasamos agentEvents para que whatsapp.js nos emita eventos
-            initWhatsAppClient(agentEvents);
+            if (platforms.includes('web')) {
+                console.log(chalk.magentaBright('\n[!] Dashboard Web activado. Escuchando directivas locales...'));
+            }
             
         } catch (error) {
             spinner.fail(chalk.red('Error en el arranque de la conciencia.'));
