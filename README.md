@@ -102,30 +102,22 @@ The system is designed for deployment on any Node.js environment, including low-
 
 ### 5.2 Installation Steps
 
-**1. Clone the repository:**
-```bash
-git clone https://github.com/DOMINUSBABEL/BABYLON.IA.git
-cd BABYLON.IA
-```
+**Automatic Universal Installation (1-Command):**
 
-**2. Automatic Installation (1-Command per Environment):**
+BABYLON.IA is optimized for seamless cross-platform deployment. You do not need to clone the repository manually; simply run the corresponding command for your terminal to download and install everything globally.
 
-BABYLON.IA is optimized for cross-platform deployment. Use the appropriate command for your OS:
-
-*   **Android (Termux) - Optimized for Low Resources (e.g., Honor X6c):**
+*   **Linux / macOS / Android (Termux) / iOS (iSH):**
     ```bash
-    bash install_android.sh
+    curl -s https://raw.githubusercontent.com/DOMINUSBABEL/BABYLON.IA/main/install.sh | bash
     ```
-*   **Windows:**
+    *(Note: If `curl` is missing, use `wget -qO- https://raw.githubusercontent.com/DOMINUSBABEL/BABYLON.IA/main/install.sh | bash`)*
+
+*   **Windows (PowerShell 5.1+):**
     ```powershell
-    .\install.ps1
-    ```
-*   **macOS / iOS (iSH) / Linux:**
-    ```bash
-    npm install && npm link
+    Invoke-WebRequest -Uri "https://raw.githubusercontent.com/DOMINUSBABEL/BABYLON.IA/main/install.ps1" -OutFile "install.ps1"; .\install.ps1
     ```
 
-**3. Run the Onboarding Configuration:**
+**2. Run the Onboarding Configuration:**
 This interactive menu sets up the agent, selects the AI model (including OS-specific local models and the primary Gemini Auth-Bridge), links platforms, creates the Sandbox workspace, and configures the deployment environment.
 ```bash
 babylonia onboard
