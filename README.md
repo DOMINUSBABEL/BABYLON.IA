@@ -30,11 +30,12 @@ The backend is driven by the "OpenClaw" engine, which orchestrates the execution
 
 ## 3. Implementation and Installation
 
-The system is designed for deployment on any Node.js environment.
+The system is designed for deployment on any Node.js environment, including low-resource mobile terminals like Termux (Android) or iSH (iOS).
 
 ### 3.1 Prerequisites
 - Node.js installed (v18+ recommended).
 - Gemini CLI authenticated (`gemini login`) OR a Gemini API Key.
+- Optional: Ollama installed for local Open-Source Models (Gemma, Qwen).
 - Git for cloning the repository.
 
 ### 3.2 Installation Steps
@@ -52,7 +53,7 @@ The system is designed for deployment on any Node.js environment.
    ```
 
 3. **Run the Onboarding Configuration:**
-   This interactive menu sets up the agent, selects the AI model, links platforms (WhatsApp, Telegram, X, Web), creates the Sandbox workspace, and configures MCPs/Skills.
+   This interactive menu sets up the agent, selects the AI model (including local Ollama models), links platforms (WhatsApp, Telegram, X, Web), creates the Sandbox workspace, and configures the deployment environment (Desktop vs. Mobile Terminal).
    ```bash
    babylon.ia onboard
    ```

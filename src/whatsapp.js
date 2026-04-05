@@ -12,10 +12,35 @@ import { processTask } from './agent_core.js';
 export function initWhatsAppClient(agentEvents = null) {
     console.log(chalk.cyan('Inicializando el navegador Headless de WhatsApp Web (puede tomar unos segundos)...'));
     
+    // Configuración condicional para Termux / mobile_terminal
+    const puppeteerArgs = ['--no-sandbox', '--disable-setuid-sandbox'];
+    let executablePath = undefined;
+
+    if (process.env.ENVIRONMENT === 'mobile_terminal') {
+        console.log(chalk.yellow('[Termux Mode] Aplicando configuraciones de bajo consumo de memoria...'));
+        puppeteerArgs.push(
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--single-process', // <- Importante para entornos móviles restrictivos
+            '--disable-gpu'
+        );
+        // En Termux a menudo se necesita instalar Chromium manualmente y especificar su ruta.
+        // Si el usuario tiene CHROME_BIN seteado o estamos en termux, intentamos usar una ruta común.
+        executablePath = process.env.CHROME_BIN || process.env.PUPPETEER_EXECUTABLE_PATH || '/data/data/com.termux/files/usr/bin/chromium-browser';
+        
+        if (!fs.existsSync(executablePath)) {
+            console.log(chalk.red(`[Advertencia Termux] Chromium no encontrado en ${executablePath}. Asegúrate de tenerlo instalado: pkg install chromium`));
+            executablePath = undefined; // Dejar que puppeteer intente descargado
+        }
+    }
+
     const client = new Client({
         authStrategy: new LocalAuth({ dataPath: './.wwebjs_auth' }),
         puppeteer: {
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
+            args: puppeteerArgs,
+            executablePath: executablePath
         }
     });
 

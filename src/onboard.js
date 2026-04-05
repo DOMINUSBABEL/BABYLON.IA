@@ -28,7 +28,18 @@ export async function runOnboard() {
     choices: [
       { name: 'gemini-2.5-pro (Avanzado, razonamiento complejo)', value: 'gemini-2.5-pro' },
       { name: 'gemini-2.5-flash (Rápido, respuestas instantáneas)', value: 'gemini-2.5-flash' },
-      { name: 'gemini-2.0-flash-lite-preview-02-05 (Experimental)', value: 'gemini-2.0-flash-lite-preview-02-05' }
+      { name: 'gemini-2.0-flash-lite-preview-02-05 (Experimental)', value: 'gemini-2.0-flash-lite-preview-02-05' },
+      { name: 'ollama:gemma2 (Local Open Source - Optimizado)', value: 'ollama:gemma2' },
+      { name: 'ollama:qwen2.5 (Local Open Source - Rápido)', value: 'ollama:qwen2.5' }
+    ]
+  });
+
+  // 2.5 Select Environment
+  const environment = await select({
+    message: 'Selecciona el entorno de despliegue (afecta el consumo de recursos y dependencias de UI):',
+    choices: [
+      { name: 'Desktop (PC/Mac/Linux) - Modo estándar', value: 'desktop' },
+      { name: 'Mobile Terminal (Termux/iSH en Android/iOS) - Bajo consumo, Puppeteer ligero', value: 'mobile_terminal' }
     ]
   });
 
@@ -82,6 +93,7 @@ export async function runOnboard() {
   const envPath = path.join(rootDir, '.env');
   const envContent = `
 # Configuración generada por babylon.ia onboard
+ENVIRONMENT=${environment}
 GEMINI_MODEL=${model}
 USE_GEMINI_CLI_OAUTH=${linkGeminiCLI ? 'true' : 'false'}
 GEMINI_API_KEY=${geminiApiKey}
