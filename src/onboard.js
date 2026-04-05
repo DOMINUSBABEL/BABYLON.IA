@@ -26,6 +26,8 @@ export async function runOnboard() {
   const model = await select({
     message: 'Selecciona el modelo cognitivo a utilizar:',
     choices: [
+      { name: 'gemini-3.1-pro-preview (Súper-Inteligencia, máximo razonamiento)', value: 'gemini-3.1-pro-preview' },
+      { name: 'gemini-3.0-pro (Avanzado, reasoning superior)', value: 'gemini-3.0-pro' },
       { name: 'gemini-2.5-pro (Avanzado, razonamiento complejo)', value: 'gemini-2.5-pro' },
       { name: 'gemini-2.5-flash (Rápido, respuestas instantáneas)', value: 'gemini-2.5-flash' },
       { name: 'gemini-2.0-flash-lite-preview-02-05 (Experimental)', value: 'gemini-2.0-flash-lite-preview-02-05' },
