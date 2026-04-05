@@ -108,13 +108,13 @@ BABYLON.IA is optimized for seamless cross-platform deployment. You do not need 
 
 *   **Linux / macOS / Android (Termux) / iOS (iSH):**
     ```bash
-    curl -s https://raw.githubusercontent.com/DOMINUSBABEL/BABYLON.IA/main/install.sh | bash
+    curl -s https://raw.githubusercontent.com/DOMINUSBABEL/BABYLON.IA/master/install.sh | bash
     ```
-    *(Note: If `curl` is missing, use `wget -qO- https://raw.githubusercontent.com/DOMINUSBABEL/BABYLON.IA/main/install.sh | bash`)*
+    *(Note: If `curl` is missing, use `wget -qO- https://raw.githubusercontent.com/DOMINUSBABEL/BABYLON.IA/master/install.sh | bash`)*
 
 *   **Windows (PowerShell 5.1+):**
     ```powershell
-    Invoke-WebRequest -Uri "https://raw.githubusercontent.com/DOMINUSBABEL/BABYLON.IA/main/install.ps1" -OutFile "install.ps1"; .\install.ps1
+    Invoke-WebRequest -Uri "https://raw.githubusercontent.com/DOMINUSBABEL/BABYLON.IA/master/install.ps1" -OutFile "install.ps1"; .\install.ps1
     ```
 
 **2. Run the Onboarding Configuration:**
