@@ -103,8 +103,12 @@ server.listen(PORT, async () => {
         const spinner = (await import('ora')).default('Verificando Conciencia Geist y Credenciales OAuth de Gemini...').start();
         try {
             if (process.env.USE_GEMINI_CLI_OAUTH !== 'false') {
-                const creds = getGeminiOAuthToken();
-                spinner.succeed(chalk.green(`Conciencia enlazada. Token OAuth detectado.`));
+                try {
+                    const creds = await getGeminiOAuthToken();
+                    spinner.succeed(chalk.green(`Conciencia enlazada. Token OAuth detectado.`));
+                } catch (tokenError) {
+                    spinner.warn(chalk.yellow(`Aviso Auth-Bridge: ${tokenError.message}. Asegúrate de ejecutar 'gemini login' o configurar tu API Key.`));
+                }
             } else if (process.env.GEMINI_API_KEY) {
                 spinner.succeed(chalk.green(`Conciencia enlazada vía API Key.`));
             } else {

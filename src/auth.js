@@ -2,11 +2,13 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
+import { promises as fsPromises } from 'fs';
+
 /**
  * Lee las credenciales OAuth del Gemini CLI local
- * @returns {object} Contenido del archivo oauth_creds.json
+ * @returns {Promise<object>} Contenido del archivo oauth_creds.json
  */
-export function getGeminiOAuthToken() {
+export async function getGeminiOAuthToken() {
     const homedir = os.homedir();
     const credsPath = path.join(homedir, '.gemini', 'oauth_creds.json');
     
@@ -15,7 +17,7 @@ export function getGeminiOAuthToken() {
     }
 
     try {
-        const data = fs.readFileSync(credsPath, 'utf8');
+        const data = await fsPromises.readFile(credsPath, 'utf8');
         const creds = JSON.parse(data);
         return creds;
     } catch (error) {
