@@ -1,6 +1,6 @@
 const socket = io();
 
-// Elementos del DOM
+// DOM Elements
 const statusEl = document.getElementById('agent-status');
 const waStatusEl = document.getElementById('wa-status');
 const qrContainer = document.getElementById('qr-container');
@@ -15,6 +15,71 @@ const reasoningStatus = document.getElementById('reasoning-status');
 const commandForm = document.getElementById('command-form');
 const cmdInput = document.getElementById('cmd-input');
 const clearBtn = document.getElementById('clear-btn');
+const quickCmds = document.querySelectorAll('.quick-cmd');
+
+// Tab System
+const tabBtns = document.querySelectorAll('.tab-btn');
+const tabContents = document.querySelectorAll('.tab-content');
+
+// Config Elements
+const configForm = document.getElementById('config-form');
+const btnRefreshConfig = document.getElementById('btn-refresh-config');
+const configModel = document.getElementById('config-model');
+const configCustomModel = document.getElementById('config-custom-model');
+
+// Context Elements
+const contextEditor = document.getElementById('context-editor');
+const saveContextBtn = document.getElementById('save-context-btn');
+const contextLoading = document.getElementById('context-loading');
+
+// Theme Toggle
+const themeToggle = document.getElementById('theme-toggle');
+const appBody = document.getElementById('app-body');
+let isAzulOro = true;
+
+themeToggle.addEventListener('click', () => {
+    isAzulOro = !isAzulOro;
+    if (isAzulOro) {
+        appBody.classList.add('theme-azul-oro');
+    } else {
+        appBody.classList.remove('theme-azul-oro');
+    }
+    appendLog(`Tema visual cambiado a ${isAzulOro ? 'Azul y Oro' : 'Matrix'}`, 'system');
+});
+
+// Tab Navigation Logic
+tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        // Remove active class from all
+        tabBtns.forEach(b => b.classList.remove('active'));
+        tabContents.forEach(c => c.classList.remove('active', 'hidden'));
+        tabContents.forEach(c => c.classList.add('hidden'));
+
+        // Add active class to clicked
+        btn.classList.add('active');
+        const targetId = btn.getAttribute('data-target');
+        const targetContent = document.getElementById(targetId);
+        targetContent.classList.remove('hidden');
+        targetContent.classList.add('active');
+
+        // Load specific data when tab is opened
+        if (targetId === 'tab-context') {
+            socket.emit('get_agents_md');
+        } else if (targetId === 'tab-config') {
+            socket.emit('get_config');
+        }
+    });
+});
+
+// Select custom model logic
+configModel.addEventListener('change', (e) => {
+    if (e.target.value === 'custom') {
+        configCustomModel.disabled = false;
+        configCustomModel.focus();
+    } else {
+        configCustomModel.disabled = true;
+    }
+});
 
 // Utilidad para autoscroll
 function scrollToBottom(el) {
@@ -37,8 +102,8 @@ function appendLog(msg, type = 'info') {
         colorClass = 'text-green-400';
         icon = '<i class="fa-solid fa-check text-green-500 mr-2"></i>';
     } else if (type === 'system') {
-        colorClass = 'text-blue-400';
-        icon = '<i class="fa-solid fa-gear text-blue-500 mr-2"></i>';
+        colorClass = 'text-accent-400';
+        icon = '<i class="fa-solid fa-gear text-accent-500 mr-2"></i>';
     }
 
     div.className = `${colorClass} animate-fade-in flex items-start gap-2 mb-1`;
@@ -52,32 +117,30 @@ function appendLog(msg, type = 'info') {
 function appendReasoning(msg) {
     if (!reasoningOutput || !reasoningStatus) return;
 
-    // Si es el primer mensaje, limpiamos el placeholder
     if (reasoningOutput.innerHTML.includes('Esperando inyección')) {
         reasoningOutput.innerHTML = '';
     }
 
     const div = document.createElement('div');
     
-    // Determinar estilo según la fase
     let styleClass = 'text-gray-300 border-l-2 border-gray-700 pl-3 py-1';
-    let icon = '<i class="fa-solid fa-bolt text-yellow-500 mr-2"></i>';
+    let icon = '<i class="fa-solid fa-bolt text-primary-500 mr-2"></i>';
     
     if (msg.includes('Tesis')) {
-        styleClass = 'text-blue-300 border-l-2 border-blue-500 pl-3 py-2 bg-blue-900/10 rounded-r';
-        icon = '<i class="fa-solid fa-magnifying-glass text-blue-400 mr-2"></i>';
-        reasoningStatus.innerHTML = '<i class="fa-solid fa-circle text-[10px] mr-1 text-blue-400 animate-pulse"></i> ASIMILANDO';
-        reasoningStatus.className = 'text-xs font-bold text-blue-400 bg-blue-900/30 px-2 py-1 rounded border border-blue-500/30';
+        styleClass = 'text-accent-300 border-l-2 border-accent-500 pl-3 py-2 bg-accent-900/10 rounded-r';
+        icon = '<i class="fa-solid fa-magnifying-glass text-accent-400 mr-2"></i>';
+        reasoningStatus.innerHTML = '<i class="fa-solid fa-circle text-[10px] mr-1 text-accent-400 animate-pulse"></i> ASIMILANDO';
+        reasoningStatus.className = 'text-xs font-bold text-accent-400 bg-accent-900/30 px-2 py-1 rounded border border-accent-500/30';
     } else if (msg.includes('Antítesis') && msg.includes('Ollama')) {
         styleClass = 'text-purple-300 border-l-2 border-purple-500 pl-3 py-2 bg-purple-900/10 rounded-r';
         icon = '<i class="fa-solid fa-microchip text-purple-400 mr-2"></i>';
         reasoningStatus.innerHTML = '<i class="fa-solid fa-circle text-[10px] mr-1 text-purple-400 animate-pulse"></i> INFERENCIA LOCAL';
         reasoningStatus.className = 'text-xs font-bold text-purple-400 bg-purple-900/30 px-2 py-1 rounded border border-purple-500/30';
     } else if (msg.includes('Antítesis')) {
-        styleClass = 'text-yellow-300 border-l-2 border-yellow-500 pl-3 py-2 bg-yellow-900/10 rounded-r';
-        icon = '<i class="fa-solid fa-network-wired text-yellow-400 mr-2"></i>';
-        reasoningStatus.innerHTML = '<i class="fa-solid fa-circle text-[10px] mr-1 text-yellow-400 animate-pulse"></i> SINTETIZANDO NUBE';
-        reasoningStatus.className = 'text-xs font-bold text-yellow-400 bg-yellow-900/30 px-2 py-1 rounded border border-yellow-500/30';
+        styleClass = 'text-primary-300 border-l-2 border-primary-500 pl-3 py-2 bg-primary-900/10 rounded-r';
+        icon = '<i class="fa-solid fa-network-wired text-primary-400 mr-2"></i>';
+        reasoningStatus.innerHTML = '<i class="fa-solid fa-circle text-[10px] mr-1 text-primary-400 animate-pulse"></i> SINTETIZANDO NUBE';
+        reasoningStatus.className = 'text-xs font-bold text-primary-400 bg-primary-900/30 px-2 py-1 rounded border border-primary-500/30';
     } else if (msg.includes('Síntesis')) {
         styleClass = 'text-green-300 border-l-2 border-green-500 pl-3 py-2 bg-green-900/10 rounded-r';
         icon = '<i class="fa-solid fa-check-double text-green-400 mr-2"></i>';
@@ -86,7 +149,7 @@ function appendReasoning(msg) {
         
         setTimeout(() => {
             reasoningStatus.innerHTML = '<i class="fa-solid fa-circle text-[10px] mr-1 text-gray-500"></i> STANDBY';
-            reasoningStatus.className = 'text-xs font-bold text-blue-500 bg-blue-900/30 px-2 py-1 rounded border border-blue-500/30';
+            reasoningStatus.className = 'text-xs font-bold text-accent-500 bg-accent-900/30 px-2 py-1 rounded border border-accent-500/30';
         }, 3000);
     } else if (msg.includes('Subagente') || msg.includes('Herramienta')) {
         styleClass = 'text-orange-300 border-l-2 border-orange-500 pl-3 py-2 bg-orange-900/10 rounded-r';
@@ -102,6 +165,17 @@ function appendReasoning(msg) {
     scrollToBottom(reasoningOutput);
 }
 
+// Quick Commands
+quickCmds.forEach(btn => {
+    btn.addEventListener('click', () => {
+        const cmd = btn.getAttribute('data-cmd');
+        if (cmdInput) {
+            cmdInput.value = cmd;
+            cmdInput.focus();
+        }
+    });
+});
+
 // Socket Events
 socket.on('connect', () => {
     if (statusEl) {
@@ -109,6 +183,7 @@ socket.on('connect', () => {
         statusEl.className = 'px-2 py-1 bg-green-900/50 text-green-400 rounded border border-green-500/50 shadow-[0_0_10px_rgba(34,197,94,0.3)] font-bold';
     }
     appendLog('Conexión WebSocket establecida con el motor Geist.', 'system');
+    socket.emit('get_config'); // Load initial config silently
 });
 
 socket.on('disconnect', () => {
@@ -139,19 +214,77 @@ socket.on('whatsapp_ready', () => {
         waConnectedState.classList.add('flex');
     }
     if (waStatusEl) {
-        waStatusEl.innerHTML = '<i class="fa-solid fa-link text-green-400 mr-1"></i> Enlazado';
-        waStatusEl.className = 'text-green-400 font-bold drop-shadow-[0_0_5px_rgba(34,197,94,0.8)]';
+        waStatusEl.innerHTML = '<i class="fa-solid fa-link text-primary-400 mr-1"></i> Enlazado';
+        waStatusEl.className = 'text-primary-400 font-bold glow-text';
     }
     appendLog('Módulo de WhatsApp inicializado y acoplado a la red.', 'success');
 });
 
-socket.on('agent_log', (msg) => {
-    appendLog(msg, 'info');
+// New Config & Context Events
+socket.on('config_data', (config) => {
+    if(config.model) {
+        // check if it's in our predefined options
+        let optionFound = false;
+        Array.from(configModel.options).forEach(opt => {
+            if(opt.value === config.model) optionFound = true;
+        });
+
+        if (optionFound) {
+            configModel.value = config.model;
+            configCustomModel.disabled = true;
+            configCustomModel.value = '';
+        } else {
+            configModel.value = 'custom';
+            configCustomModel.disabled = false;
+            configCustomModel.value = config.model;
+        }
+    }
+
+    if(config.whatsapp !== undefined) document.getElementById('toggle-whatsapp').checked = config.whatsapp;
+    if(config.telegram !== undefined) document.getElementById('toggle-telegram').checked = config.telegram;
+    if(config.twitter !== undefined) document.getElementById('toggle-twitter').checked = config.twitter;
+
+    appendLog('Configuración sincronizada con el backend.', 'system');
 });
 
-socket.on('agent_reasoning', (msg) => {
-    appendReasoning(msg);
+socket.on('agents_md_data', (content) => {
+    contextLoading.classList.add('hidden');
+    if (content) {
+        contextEditor.value = content;
+        appendLog('AGENTS.md cargado desde el disco.', 'system');
+    } else {
+        contextEditor.value = "No se encontró AGENTS.md en la raíz del proyecto.";
+        appendLog('No se encontró AGENTS.md.', 'error');
+    }
 });
+
+socket.on('config_updated', (msg) => {
+    appendLog(msg, 'success');
+    // Show visual feedback on button
+    const submitBtn = configForm.querySelector('button[type="submit"]');
+    const originalHtml = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fa-solid fa-check mr-1"></i> Aplicado';
+    submitBtn.classList.add('bg-green-600');
+    setTimeout(() => {
+        submitBtn.innerHTML = originalHtml;
+        submitBtn.classList.remove('bg-green-600');
+    }, 2000);
+});
+
+socket.on('agents_md_saved', (msg) => {
+    appendLog(msg, 'success');
+    contextLoading.classList.add('hidden');
+    const originalHtml = saveContextBtn.innerHTML;
+    saveContextBtn.innerHTML = '<i class="fa-solid fa-check"></i> Guardado';
+    saveContextBtn.classList.add('bg-green-600');
+    setTimeout(() => {
+        saveContextBtn.innerHTML = originalHtml;
+        saveContextBtn.classList.remove('bg-green-600');
+    }, 2000);
+});
+
+socket.on('agent_log', (msg) => appendLog(msg, 'info'));
+socket.on('agent_reasoning', (msg) => appendReasoning(msg));
 
 socket.on('agent_result', (result) => {
     appendLog('Dialéctica concluida. Síntesis generada.', 'success');
@@ -167,7 +300,7 @@ socket.on('agent_error', (errorMsg) => {
     }
 });
 
-// Alias for old events mapping to new ones to ensure backwards compatibility with server.js
+// Compat map
 socket.on('whatsapp_qr', (url) => socket.emit('qr_code', url));
 socket.on('whatsapp_status', (status) => { if(status==='connected') socket.emit('whatsapp_ready'); });
 socket.on('system_log', (msg) => appendLog(msg, 'system'));
@@ -175,7 +308,7 @@ socket.on('system_error', (msg) => appendLog(msg, 'error'));
 socket.on('agent_progress', (msg) => appendReasoning(msg));
 socket.on('agent_response', (msg) => socket.emit('agent_result', msg));
 
-// Eventos de UI
+// UI Events
 if (clearBtn) {
     clearBtn.addEventListener('click', () => {
         if (terminalOutput) {
@@ -193,10 +326,10 @@ if (commandForm) {
         appendLog(`Inyectando Tesis Manual: ${cmd}`, 'system');
         
         if (reasoningOutput) {
-            reasoningOutput.innerHTML = '<div class="text-blue-900/50 italic flex items-center gap-2"><i class="fa-solid fa-satellite-dish"></i> Procesando inyección...</div>';
+            reasoningOutput.innerHTML = '<div class="text-accent-900/50 italic flex items-center gap-2"><i class="fa-solid fa-satellite-dish"></i> Procesando inyección...</div>';
         }
         
-        socket.emit('dashboard_command', cmd); // server.js usually listens to dashboard_command or ui_command
+        socket.emit('dashboard_command', cmd);
         socket.emit('ui_command', cmd);
         
         if (cmdInput) cmdInput.value = '';
@@ -209,5 +342,44 @@ if (cmdInput) {
             e.preventDefault();
             commandForm.dispatchEvent(new Event('submit'));
         }
+    });
+}
+
+// Config Submits
+if (configForm) {
+    configForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        let modelToUse = configModel.value;
+        if (modelToUse === 'custom') {
+            modelToUse = configCustomModel.value.trim();
+        }
+
+        const configData = {
+            model: modelToUse,
+            whatsapp: document.getElementById('toggle-whatsapp').checked,
+            telegram: document.getElementById('toggle-telegram').checked,
+            twitter: document.getElementById('toggle-twitter').checked
+        };
+
+        appendLog(`Enviando actualización de configuración al motor...`, 'system');
+        socket.emit('update_config', configData);
+    });
+}
+
+if (btnRefreshConfig) {
+    btnRefreshConfig.addEventListener('click', () => {
+        appendLog(`Solicitando recarga de configuración...`, 'system');
+        socket.emit('get_config');
+    });
+}
+
+// Context Actions
+if (saveContextBtn) {
+    saveContextBtn.addEventListener('click', () => {
+        const content = contextEditor.value;
+        contextLoading.classList.remove('hidden');
+        appendLog(`Guardando actualizaciones en AGENTS.md...`, 'system');
+        socket.emit('save_agents_md', content);
     });
 }

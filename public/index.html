@@ -3,121 +3,274 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BABYLON.IA | Dashboard</title>
-    <!-- TailwindCSS for styling -->
+    <title>BABYLON.IA | Dashboard Geist</title>
+    <!-- TailwindCSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome for icons -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            300: 'var(--color-primary-300)',
+                            400: 'var(--color-primary-400)',
+                            500: 'var(--color-primary-500)',
+                            900: 'var(--color-primary-900)'
+                        },
+                        accent: {
+                            300: 'var(--color-accent-300)',
+                            400: 'var(--color-accent-400)',
+                            500: 'var(--color-accent-500)',
+                            900: 'var(--color-accent-900)'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Socket.io client -->
+    <!-- Socket.io -->
     <script src="/socket.io/socket.io.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-gray-900 text-green-400 font-mono min-h-screen flex flex-col">
+<body id="app-body" class="theme-azul-oro font-mono min-h-screen flex flex-col transition-colors duration-300">
 
     <!-- Header -->
-    <header class="bg-black border-b border-green-500/30 p-4 shadow-md shadow-green-900/20">
+    <header class="header-bg border-b border-primary-500/30 p-4 shadow-md shadow-primary-900/20">
         <div class="container mx-auto flex justify-between items-center">
             <div class="flex items-center gap-3">
-                <i class="fa-solid fa-microchip text-2xl text-green-500 animate-pulse"></i>
-                <h1 class="text-xl font-bold tracking-wider text-green-500 glow-text">BABYLON.IA <span class="text-sm text-gray-500 font-normal">v1.0</span></h1>
+                <i class="fa-solid fa-microchip text-2xl text-primary-500 animate-pulse"></i>
+                <h1 class="text-xl font-bold tracking-wider text-primary-500 glow-text">BABYLON.IA <span class="text-sm text-gray-500 font-normal">v2.0</span></h1>
             </div>
-            <div class="flex items-center gap-6 text-sm">
+            <div class="flex items-center gap-4 text-sm">
+                <!-- Theme Toggle -->
+                <button id="theme-toggle" class="text-primary-400 hover:text-white transition-colors" title="Cambiar Tema">
+                    <i class="fa-solid fa-palette text-lg"></i>
+                </button>
                 <div class="flex items-center gap-2">
-                    <span class="text-gray-400">STATUS:</span>
-                    <span id="agent-status" class="px-2 py-1 bg-gray-800 text-green-400 rounded border border-green-500/30">Iniciando...</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <span class="text-gray-400">WHATSAPP:</span>
-                    <span id="wa-status" class="text-yellow-500"><i class="fa-solid fa-circle-notch fa-spin"></i> Esperando</span>
+                    <span class="text-gray-400 hidden sm:inline">STATUS:</span>
+                    <span id="agent-status" class="px-2 py-1 bg-gray-800 text-primary-400 rounded border border-primary-500/30 status-box">Iniciando...</span>
                 </div>
             </div>
         </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="container mx-auto p-4 flex-grow grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
+    <!-- Navigation Tabs -->
+    <nav class="container mx-auto mt-4 px-4">
+        <div class="flex space-x-1 border-b border-primary-500/30 overflow-x-auto">
+            <button class="tab-btn active" data-target="tab-dashboard">
+                <i class="fa-solid fa-desktop mr-2"></i>Dashboard
+            </button>
+            <button class="tab-btn" data-target="tab-config">
+                <i class="fa-solid fa-sliders mr-2"></i>Modelo & Ops
+            </button>
+            <button class="tab-btn" data-target="tab-context">
+                <i class="fa-solid fa-book-journal-whills mr-2"></i>Contexto (Wiki)
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="container mx-auto p-4 flex-grow relative overflow-hidden">
         
-        <!-- Left Column: Controls & QR -->
-        <div class="flex flex-col gap-6">
+        <!-- ==================== TAB: DASHBOARD ==================== -->
+        <div id="tab-dashboard" class="tab-content active grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
             
-            <!-- WhatsApp Card -->
-            <div class="glass-panel rounded-lg p-5 shadow-lg relative overflow-hidden group">
-                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-green-500 to-transparent opacity-50"></div>
-                <h2 class="text-lg font-semibold text-gray-200 mb-4 border-b border-gray-800 pb-2 glow-text">
-                    <i class="fa-brands fa-whatsapp text-green-500 mr-2"></i> Conexión WhatsApp
-                </h2>
+            <!-- Left Column: Controls & QR -->
+            <div class="flex flex-col gap-6">
                 
-                <div id="qr-container" class="flex flex-col items-center justify-center p-4 bg-gray-900/50 rounded min-h-[250px] relative overflow-hidden">
-                    <div class="scanner-line"></div>
-                    <div id="qr-spinner" class="text-center text-gray-400">
-                        <i class="fa-solid fa-spinner fa-spin text-3xl mb-2 text-green-500"></i>
-                        <p class="text-sm">Generando matriz de enlace...</p>
+                <!-- WhatsApp Card -->
+                <div class="glass-panel rounded-lg p-5 shadow-lg relative overflow-hidden group">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary-500 to-transparent opacity-50"></div>
+                    <div class="flex justify-between items-center mb-4 border-b border-gray-800 pb-2">
+                        <h2 class="text-lg font-semibold text-gray-200 glow-text">
+                            <i class="fa-brands fa-whatsapp text-primary-500 mr-2"></i> Enlace WhatsApp
+                        </h2>
+                        <span id="wa-status" class="text-yellow-500 text-sm"><i class="fa-solid fa-circle-notch fa-spin"></i> Esperando</span>
                     </div>
-                    <img id="qr-image" src="" alt="WhatsApp QR Code" class="hidden rounded-lg shadow-md border-4 border-white max-w-[220px]">
+
+                    <div id="qr-container" class="flex flex-col items-center justify-center p-4 bg-gray-900/50 rounded min-h-[220px] relative overflow-hidden border border-gray-800">
+                        <div class="scanner-line"></div>
+                        <div id="qr-spinner" class="text-center text-gray-400">
+                            <i class="fa-solid fa-spinner fa-spin text-3xl mb-2 text-primary-500"></i>
+                            <p class="text-sm">Generando matriz...</p>
+                        </div>
+                        <img id="qr-image" src="" alt="WhatsApp QR Code" class="hidden rounded-lg shadow-md border-4 border-white max-w-[200px]">
+                    </div>
+
+                    <div id="wa-connected-state" class="hidden flex-col items-center justify-center p-4 bg-primary-900/20 rounded min-h-[220px] border border-primary-500/30">
+                        <i class="fa-solid fa-check-circle text-5xl text-primary-500 mb-3 glow-text"></i>
+                        <p class="text-lg font-bold text-primary-400">Enlace Establecido</p>
+                    </div>
                 </div>
-                
-                <div id="wa-connected-state" class="hidden flex-col items-center justify-center p-4 bg-green-900/20 rounded min-h-[250px] border border-green-500/30">
-                    <i class="fa-solid fa-check-circle text-5xl text-green-500 mb-3 drop-shadow-[0_0_8px_rgba(34,197,94,0.8)]"></i>
-                    <p class="text-lg font-bold text-green-400">Enlace Establecido</p>
-                    <p class="text-xs text-gray-400 mt-2 text-center">El motor de WhatsApp está a la escucha de directivas !geist</p>
+
+                <!-- Toolbox Card -->
+                <div class="bg-panel border border-primary-500/20 rounded-lg p-5 shadow-lg flex-grow flex flex-col">
+                    <h2 class="text-lg font-semibold text-gray-200 mb-3 border-b border-gray-800 pb-2">
+                        <i class="fa-solid fa-terminal text-primary-500 mr-2"></i> Inyección Directa
+                    </h2>
+
+                    <!-- Quick Commands -->
+                    <div class="flex flex-wrap gap-2 mb-3">
+                        <button class="quick-cmd bg-gray-800 hover:bg-primary-900/50 text-xs text-gray-300 border border-gray-700 px-2 py-1 rounded transition-colors" data-cmd="!geist status">Status</button>
+                        <button class="quick-cmd bg-gray-800 hover:bg-primary-900/50 text-xs text-gray-300 border border-gray-700 px-2 py-1 rounded transition-colors" data-cmd="Resumen de estado del sistema">Resumen</button>
+                    </div>
+
+                    <form id="command-form" class="flex flex-col gap-3 flex-grow">
+                        <textarea id="cmd-input" rows="3" placeholder="Ej: Analiza el contexto y dame un reporte..." class="w-full bg-gray-800 border border-primary-500/30 rounded p-3 text-sm text-primary-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 resize-none font-mono flex-grow"></textarea>
+                        <button type="submit" class="btn-primary py-2 px-4 rounded flex items-center justify-center gap-2 font-bold uppercase tracking-wider transition-colors">
+                            <i class="fa-solid fa-bolt"></i> Ejecutar
+                        </button>
+                    </form>
                 </div>
             </div>
 
-            <!-- Toolbox Card -->
-            <div class="bg-black border border-green-500/20 rounded-lg p-5 shadow-lg flex-grow">
-                <h2 class="text-lg font-semibold text-gray-200 mb-4 border-b border-gray-800 pb-2">
-                    <i class="fa-solid fa-terminal text-green-500 mr-2"></i> Inyección Directa (Toolbox)
-                </h2>
-                <form id="command-form" class="flex flex-col gap-3 h-full">
-                    <p class="text-xs text-gray-500 mb-2">Envía un prompt directamente al motor OpenClaw, saltándose la capa de WhatsApp.</p>
-                    <textarea id="cmd-input" rows="4" placeholder="Ej: Analiza el archivo log.txt y resume los errores..." class="w-full bg-gray-800 border border-green-500/30 rounded p-3 text-sm text-green-400 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 resize-none font-mono"></textarea>
-                    <button type="submit" class="mt-auto bg-green-900/50 hover:bg-green-700 text-green-400 hover:text-white border border-green-500 transition-colors py-2 px-4 rounded flex items-center justify-center gap-2 font-bold uppercase tracking-wider">
-                        <i class="fa-solid fa-bolt"></i> Ejecutar Tesis
-                    </button>
-                </form>
+            <!-- Right Column: System Logs & Reasoning -->
+            <div class="lg:col-span-2 flex flex-col gap-6">
+                <!-- Reasoning Panel -->
+                <div class="glass-panel border-accent-500/50 rounded-lg shadow-accent flex flex-col overflow-hidden h-[350px]">
+                    <div class="bg-panel border-b border-accent-500/50 p-3 flex justify-between items-center">
+                        <h2 class="text-sm font-bold text-accent-400 glow-accent">
+                            <i class="fa-solid fa-brain mr-2 animate-pulse"></i> Flujo de Razonamiento Geist
+                        </h2>
+                        <div id="reasoning-status" class="text-xs font-bold text-accent-500 bg-accent-900/30 px-2 py-1 rounded border border-accent-500/30">
+                            <i class="fa-solid fa-circle text-[10px] mr-1"></i> STANDBY
+                        </div>
+                    </div>
+                    <div id="reasoning-output" class="flex-grow p-4 overflow-y-auto bg-darker text-sm leading-relaxed font-mono whitespace-pre-wrap break-words space-y-3 custom-scrollbar">
+                        <div class="text-accent-900/50 italic flex items-center gap-2"><i class="fa-solid fa-satellite-dish"></i> Esperando inyección...</div>
+                    </div>
+                </div>
+
+                <!-- Terminal Output -->
+                <div class="glass-panel border-primary-500/30 rounded-lg shadow-primary flex flex-col overflow-hidden flex-grow h-[300px]">
+                    <div class="bg-panel border-b border-primary-500/30 p-3 flex justify-between items-center">
+                        <h2 class="text-sm font-semibold text-primary-400 glow-text">
+                            <i class="fa-solid fa-server mr-2"></i> Telemetría del Sistema
+                        </h2>
+                        <button id="clear-btn" class="text-xs text-gray-400 hover:text-primary-400 bg-gray-800 px-2 py-1 rounded transition-all">
+                            <i class="fa-solid fa-eraser"></i> Purgar
+                        </button>
+                    </div>
+                    <div id="terminal-output" class="flex-grow p-4 overflow-y-auto bg-darkest text-xs leading-relaxed font-mono whitespace-pre-wrap break-words custom-scrollbar">
+                        <div class="text-gray-500 flex items-center gap-2 mb-2"><i class="fa-solid fa-terminal"></i> Daemon TUI inicializado.</div>
+                    </div>
+                </div>
             </div>
-            
         </div>
 
-        <!-- Right Column: System Logs & Reasoning Panel -->
-        <div class="lg:col-span-2 flex flex-col gap-6">
-            
-            <!-- Reasoning Panel -->
-            <div class="glass-panel border-blue-500/50 rounded-lg shadow-[0_0_20px_rgba(59,130,246,0.2)] flex flex-col overflow-hidden h-[350px]">
-                <div class="bg-gray-900 border-b border-blue-500/50 p-3 flex justify-between items-center">
-                    <h2 class="text-sm font-bold text-blue-400 glow-blue">
-                        <i class="fa-solid fa-brain mr-2 animate-pulse"></i> Flujo de Razonamiento Geist
-                    </h2>
-                    <div id="reasoning-status" class="text-xs font-bold text-blue-500 bg-blue-900/30 px-2 py-1 rounded border border-blue-500/30">
-                        <i class="fa-solid fa-circle text-[10px] mr-1"></i> STANDBY
-                    </div>
-                </div>
-                <div id="reasoning-output" class="flex-grow p-5 overflow-y-auto bg-[#03030b] text-sm leading-relaxed font-mono whitespace-pre-wrap break-words space-y-3">
-                    <div class="text-blue-900/50 italic flex items-center gap-2"><i class="fa-solid fa-satellite-dish"></i> Esperando inyección de tesis...</div>
-                </div>
-            </div>
+        <!-- ==================== TAB: CONFIGURATION ==================== -->
+        <div id="tab-config" class="tab-content hidden max-w-4xl mx-auto w-full animate-fade-in">
+            <div class="glass-panel rounded-lg p-6 shadow-lg">
+                <h2 class="text-xl font-bold text-primary-400 mb-6 border-b border-primary-500/30 pb-2">
+                    <i class="fa-solid fa-microchip mr-2"></i> Configuración del Modelo y Ops
+                </h2>
 
-            <!-- Terminal Output -->
-            <div class="glass-panel border-green-500/30 rounded-lg shadow-[0_0_15px_rgba(34,197,94,0.1)] flex flex-col overflow-hidden flex-grow h-[300px]">
-                <div class="bg-gray-900 border-b border-green-500/30 p-3 flex justify-between items-center">
-                    <h2 class="text-sm font-semibold text-green-400 glow-text">
-                        <i class="fa-solid fa-server mr-2"></i> Telemetría del Sistema
+                <form id="config-form" class="space-y-6">
+                    <!-- Model Selection -->
+                    <div class="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
+                        <h3 class="text-lg font-semibold text-gray-200 mb-3"><i class="fa-solid fa-brain text-accent-400 mr-2"></i> Motor de Inferencia</h3>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Modelo Activo (GEMINI_MODEL)</label>
+                                <div class="flex gap-2">
+                                    <select id="config-model" class="w-full bg-gray-900 border border-primary-500/30 rounded p-2 text-primary-400 focus:border-primary-500 outline-none">
+                                        <option value="gemini-2.5-flash">Gemini 2.5 Flash (Rápido)</option>
+                                        <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro (Razonamiento)</option>
+                                        <option value="gemini-2.0-flash-lite-preview">Gemini Flash Lite (Bajo consumo)</option>
+                                        <option value="ollama:llama3">Ollama: Llama 3 (Local)</option>
+                                        <option value="aiedge:gemma-2b">Edge: Gemma 2B (Local Edge)</option>
+                                        <option value="custom">Otro (Personalizado)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Modelo Personalizado</label>
+                                <input type="text" id="config-custom-model" placeholder="ej: ollama:mistral" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-gray-300 disabled:opacity-50" disabled>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Integrations Toggles -->
+                    <div class="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
+                        <h3 class="text-lg font-semibold text-gray-200 mb-3"><i class="fa-solid fa-network-wired text-yellow-500 mr-2"></i> Canales e Integraciones</h3>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <label class="flex items-center justify-between p-3 bg-gray-900 rounded border border-gray-700 cursor-pointer hover:border-primary-500/50 transition-colors">
+                                <div class="flex items-center gap-2">
+                                    <i class="fa-brands fa-whatsapp text-green-500"></i>
+                                    <span class="text-gray-300">WhatsApp</span>
+                                </div>
+                                <div class="relative">
+                                    <input type="checkbox" id="toggle-whatsapp" class="sr-only peer" checked>
+                                    <div class="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                                </div>
+                            </label>
+
+                            <label class="flex items-center justify-between p-3 bg-gray-900 rounded border border-gray-700 cursor-pointer hover:border-primary-500/50 transition-colors opacity-60">
+                                <div class="flex items-center gap-2">
+                                    <i class="fa-brands fa-telegram text-blue-400"></i>
+                                    <span class="text-gray-300">Telegram</span>
+                                </div>
+                                <div class="relative">
+                                    <input type="checkbox" id="toggle-telegram" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                                </div>
+                            </label>
+
+                            <label class="flex items-center justify-between p-3 bg-gray-900 rounded border border-gray-700 cursor-pointer hover:border-primary-500/50 transition-colors opacity-60">
+                                <div class="flex items-center gap-2">
+                                    <i class="fa-brands fa-x-twitter text-white"></i>
+                                    <span class="text-gray-300">Twitter (X)</span>
+                                </div>
+                                <div class="relative">
+                                    <input type="checkbox" id="toggle-twitter" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-400"></div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-3 pt-4 border-t border-gray-800">
+                        <button type="button" id="btn-refresh-config" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded transition-colors">
+                            <i class="fa-solid fa-rotate-right mr-1"></i> Recargar
+                        </button>
+                        <button type="submit" class="px-6 py-2 btn-primary rounded font-bold transition-colors">
+                            <i class="fa-solid fa-save mr-1"></i> Aplicar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- ==================== TAB: CONTEXT / WIKI ==================== -->
+        <div id="tab-context" class="tab-content hidden h-full w-full animate-fade-in">
+            <div class="glass-panel rounded-lg p-5 shadow-lg h-full flex flex-col">
+                <div class="flex justify-between items-center mb-4 border-b border-gray-800 pb-2">
+                    <h2 class="text-xl font-bold text-primary-400">
+                        <i class="fa-solid fa-book-journal-whills mr-2"></i> AGENTS.md / Contexto del Sistema
                     </h2>
-                    <button id="clear-btn" class="text-xs text-gray-400 hover:text-green-400 border border-transparent hover:border-green-500/50 bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded transition-all" title="Limpiar Consola">
-                        <i class="fa-solid fa-eraser"></i> Purgar Logs
+                    <button id="save-context-btn" class="px-4 py-1.5 btn-primary rounded text-sm font-bold transition-colors flex items-center gap-2">
+                        <i class="fa-solid fa-floppy-disk"></i> Guardar
                     </button>
                 </div>
 
-                <div id="terminal-output" class="flex-grow p-4 overflow-y-auto bg-[#050a05] text-xs leading-relaxed font-mono whitespace-pre-wrap break-words">
-                    <div class="text-gray-500 flex items-center gap-2 mb-2"><i class="fa-solid fa-terminal"></i> Daemon TUI inicializado.</div>
+                <p class="text-xs text-gray-400 mb-3">Edita el archivo base de conocimiento del agente. Este archivo dicta las reglas, tools disponibles y la personalidad base.</p>
+
+                <div class="flex-grow relative rounded border border-primary-500/30 overflow-hidden">
+                    <div id="context-loading" class="absolute inset-0 bg-gray-900/80 flex items-center justify-center z-10 hidden">
+                        <i class="fa-solid fa-spinner fa-spin text-3xl text-primary-500"></i>
+                    </div>
+                    <textarea id="context-editor" class="w-full h-[500px] bg-[#050a0f] text-gray-300 p-4 font-mono text-sm focus:outline-none resize-none custom-scrollbar" spellcheck="false">Cargando contexto...</textarea>
                 </div>
             </div>
-
         </div>
 
     </main>
 
-    <footer class="text-center p-4 text-xs text-gray-600 border-t border-green-500/20 mt-auto">
+    <footer class="text-center p-3 text-xs text-gray-600 border-t border-primary-500/20 mt-auto bg-black/50">
         Babylon.IA Dashboard - Arquitectura Geist &copy; 2026
     </footer>
 
