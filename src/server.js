@@ -124,6 +124,9 @@ function initTerminalUI() {
 
             console.log(chalk.green('  -> Síntesis natural generada (Terminal).'));
             console.log(`\n*BABYLON.IA (TUI)*:\n${response}\n`);
+            
+            // Sincronizar con WhatsApp
+            agentEvents.emit('broadcast_whatsapp', `*[Directiva desde Terminal TUI]*\n_Tesis:_ ${input}\n\n*Síntesis:*\n${response}`);
         } catch (error) {
             console.error(chalk.red(`[Error Procesando Tarea]: ${error.message}`));
         }
@@ -136,6 +139,22 @@ function initTerminalUI() {
 }
 
 // Configuración de WebSockets
+// Sincronizar eventos de WhatsApp hacia el Dashboard
+agentEvents.on('whatsapp_command_start', (cmd) => {
+    io.emit('agent_status', 'Pensando...');
+});
+agentEvents.on('whatsapp_progress', (progressText) => {
+    io.emit('agent_progress', progressText);
+});
+agentEvents.on('whatsapp_response', (response) => {
+    io.emit('agent_response', response);
+    io.emit('agent_status', 'En espera de directivas');
+});
+agentEvents.on('whatsapp_error', (error) => {
+    io.emit('agent_error', error);
+    io.emit('agent_status', 'Error');
+});
+
 io.on('connection', (socket) => {
     // console.log(chalk.gray('  [Dashboard] Cliente Web conectado.'));
     
@@ -178,6 +197,9 @@ io.on('connection', (socket) => {
             console.log(chalk.green('  -> Síntesis generada (Web).'));
             io.emit('agent_response', response);
             io.emit('agent_status', 'En espera de directivas');
+            
+            // Sincronizar con WhatsApp
+            agentEvents.emit('broadcast_whatsapp', `*[Directiva desde Dashboard Web]*\n_Tesis:_ ${cmd}\n\n*Síntesis:*\n${response}`);
             
         } catch (error) {
             console.error(chalk.red(`[Error Procesando Tarea]: ${error.message}`));

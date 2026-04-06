@@ -95,6 +95,17 @@ export function initWhatsAppClient(agentEvents = null) {
         
         if (agentEvents) {
             agentEvents.emit('whatsapp_ready');
+
+            // Escuchar peticiones de broadcast desde el Dashboard o TUI para sincronizar el historial
+            agentEvents.on('broadcast_whatsapp', async (text) => {
+                try {
+                    const myId = client.info.wid._serialized;
+                    await client.sendMessage(myId, text);
+                    console.log(chalk.gray(`  -> Sincronizado historial con WhatsApp (Chat Personal).`));
+                } catch(e) {
+                    console.error(chalk.red(`Error sincronizando con WhatsApp: ${e.message}`));
+                }
+            });
         }
     });
 
@@ -107,7 +118,7 @@ export function initWhatsAppClient(agentEvents = null) {
         // Esto evita que el bot se responda a sí mismo infinitamente.
         const msgText = msg.body ? msg.body.trim() : '';
         const botSignatures = [
-            '🧠', '⏳', '🟢', '⚠️', '❌', '*BABYLON.IA', '*Geist', 'He procesado', 'Procesando...'
+            '🧠', '⏳', '🟢', '⚠️', '❌', '*BABYLON.IA', '*Geist', 'He procesado', 'Procesando...', '*[Directiva'
         ];
         if (botSignatures.some(sig => msgText.startsWith(sig)) || msgText.includes('Estado del Sistema (Geist)')) {
             return;
@@ -201,13 +212,17 @@ export function initWhatsAppClient(agentEvents = null) {
             console.log(chalk.blue('  -> Iniciando Bucle Dialéctico Forzado (System Directive)...'));
             let statusMsg = await msg.reply('⏳ *Iniciando Bucle Dialéctico Forzado...*');
 
+            if (agentEvents) agentEvents.emit('whatsapp_command_start', commandStr);
+
             // Usamos finalPrompt que incluye los posibles adjuntos
             const response = await processTask(finalPrompt.replace('!geist', '').trim(), (progressText) => {
                 console.log(chalk.yellow(`     [Geist] ${progressText}`));
+                if (agentEvents) agentEvents.emit('whatsapp_progress', progressText);
             });
 
             console.log(chalk.green('  -> Síntesis generada. Respondiendo al usuario.'));
             await statusMsg.reply(`*BABYLON.IA (System)*:\n${response}`);
+            if (agentEvents) agentEvents.emit('whatsapp_response', response);
 
             return;
         }
@@ -216,16 +231,21 @@ export function initWhatsAppClient(agentEvents = null) {
         console.log(chalk.cyan(`\n[~] Tesis Natural Recibida [${msg.from}]: ${msgText}${msg.hasMedia ? ' [CON ARCHIVO ADJUNTO]' : ''}`));
         let naturalStatusMsg = await msg.reply('🧠 *Procesando...*');
 
+        if (agentEvents) agentEvents.emit('whatsapp_command_start', msgText);
+
         try {
             const response = await processTask(finalPrompt, (progressText) => {
                 console.log(chalk.gray(`     [LLM/Geist] ${progressText}`));
+                if (agentEvents) agentEvents.emit('whatsapp_progress', progressText);
             });
 
             console.log(chalk.green('  -> Síntesis natural generada. Respondiendo.'));
             await naturalStatusMsg.reply(response);
+            if (agentEvents) agentEvents.emit('whatsapp_response', response);
         } catch (error) {
             console.error(chalk.red(`Error en el procesamiento natural: ${error.message}`));
             await naturalStatusMsg.reply(`❌ *Error cognitivo:*\nNo he podido procesar tu solicitud adecuadamente.\n_Detalle: ${error.message}_`);
+            if (agentEvents) agentEvents.emit('whatsapp_error', error.message);
         }
     });
 
