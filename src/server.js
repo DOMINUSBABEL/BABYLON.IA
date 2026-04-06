@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import chalk from 'chalk';
 import events from 'events';
 import readline from 'readline';
+import fs from 'fs';
 
 // Submódulos del agente
 import { getGeminiOAuthToken } from './auth.js';
@@ -165,6 +166,59 @@ io.on('connection', (socket) => {
 
     agentEvents.on('whatsapp_ready', () => {
         socket.emit('whatsapp_status', 'connected');
+    });
+
+    // --- NUEVAS RUTAS DASHBOARD V2 ---
+    socket.on('get_config', () => {
+        // Leemos variables de entorno actuales como fuente de verdad
+        const currentConfig = {
+            model: process.env.GEMINI_MODEL || 'gemini-3.1-pro-preview',
+            whatsapp: (process.env.ENABLED_PLATFORMS || 'whatsapp,web').includes('whatsapp'),
+            telegram: (process.env.ENABLED_PLATFORMS || 'whatsapp,web').includes('telegram'),
+            twitter: (process.env.ENABLED_PLATFORMS || 'whatsapp,web').includes('twitter')
+        };
+        socket.emit('config_data', currentConfig);
+    });
+
+    socket.on('update_config', (newConfig) => {
+        // En un entorno de producción real, esto debería guardar en un archivo .env
+        // Por ahora, actualizamos process.env dinámicamente para la sesión actual
+        if (newConfig.model) {
+            process.env.GEMINI_MODEL = newConfig.model;
+            console.log(chalk.yellow(`[Config] Motor de Inferencia cambiado a: ${newConfig.model}`));
+        }
+
+        let platforms = ['web']; // Web siempre activo para el dashboard
+        if (newConfig.whatsapp) platforms.push('whatsapp');
+        if (newConfig.telegram) platforms.push('telegram');
+        if (newConfig.twitter) platforms.push('twitter');
+
+        process.env.ENABLED_PLATFORMS = platforms.join(',');
+        console.log(chalk.yellow(`[Config] Plataformas activas actualizadas: ${process.env.ENABLED_PLATFORMS}`));
+
+        socket.emit('config_updated', 'Configuración de OPS actualizada en memoria.');
+    });
+
+    socket.on('get_agents_md', () => {
+        const agentsMdPath = path.join(rootDir, 'AGENTS.md');
+        if (fs.existsSync(agentsMdPath)) {
+            const content = fs.readFileSync(agentsMdPath, 'utf8');
+            socket.emit('agents_md_data', content);
+        } else {
+            socket.emit('agents_md_data', '');
+        }
+    });
+
+    socket.on('save_agents_md', (content) => {
+        const agentsMdPath = path.join(rootDir, 'AGENTS.md');
+        try {
+            fs.writeFileSync(agentsMdPath, content, 'utf8');
+            console.log(chalk.green(`[Context] AGENTS.md actualizado desde el Dashboard.`));
+            socket.emit('agents_md_saved', 'Contexto AGENTS.md guardado en disco exitosamente.');
+        } catch (error) {
+            console.error(chalk.red(`[Error] Fallo al guardar AGENTS.md: ${error.message}`));
+            socket.emit('system_error', `No se pudo guardar el archivo: ${error.message}`);
+        }
     });
 
     // Permitir enviar comandos directamente desde el Dashboard web
