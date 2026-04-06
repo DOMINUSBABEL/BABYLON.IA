@@ -71,22 +71,30 @@ export async function processTask(prompt, updateProgress) {
             const { spawn } = await import('child_process');
             
             const geminiBin = process.platform === 'win32' ? 'gemini.cmd' : 'gemini';
-            const geminiProcess = spawn(geminiBin, ['-m', activeModel, '-p', '" "', '-o', 'json'], { shell: true });
+            // Desactivamos shell:true para evitar DeprecationWarning y problemas de buffer en cmd.exe con UTF-8
+            const geminiProcess = spawn(geminiBin, ['-m', activeModel, '-p', ' ', '-o', 'json'], { 
+                shell: process.platform === 'win32', // Requerido en Windows para .cmd, pero pasamos args de forma segura
+                windowsVerbatimArguments: true
+            });
 
             let stdoutData = '';
             let stderrData = '';
 
+            geminiProcess.stdout.setEncoding('utf8');
+            geminiProcess.stderr.setEncoding('utf8');
+
             geminiProcess.stdout.on('data', (data) => {
-                stdoutData += data.toString();
+                stdoutData += data;
             });
 
             geminiProcess.stderr.on('data', (data) => {
-                stderrData += data.toString();
+                stderrData += data;
             });
 
             const fullPrompt = `${contextText}\n\nDirectiva del Usuario:\n${prompt}`;
             
             // Escribir el contexto en la entrada estándar y cerrarla
+            geminiProcess.stdin.setDefaultEncoding('utf-8');
             geminiProcess.stdin.write(fullPrompt);
             geminiProcess.stdin.end();
 
