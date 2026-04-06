@@ -15,7 +15,20 @@ export function initTelegramBot(token) {
         ctx.reply('Hola, soy BABYLON.IA. ¿En qué te puedo ayudar?');
     });
 
+    const AUTHORIZED_TELEGRAM_USERS = process.env.AUTHORIZED_TELEGRAM_USERS ? process.env.AUTHORIZED_TELEGRAM_USERS.split(',').map(n => n.trim()) : [];
+
     bot.on('text', async (ctx) => {
+        const userId = ctx.from.id.toString();
+        const username = ctx.from.username ? ctx.from.username : '';
+        const isAuthorized = AUTHORIZED_TELEGRAM_USERS.length === 0 || AUTHORIZED_TELEGRAM_USERS.includes(userId) || AUTHORIZED_TELEGRAM_USERS.includes(username);
+
+        if (!isAuthorized) return;
+
+        const isPrivate = ctx.chat.type === 'private';
+        const isCommand = ctx.message.text && ctx.message.text.startsWith('!geist');
+
+        if (!isPrivate && !isCommand) return;
+
         const msg = ctx.message.text;
         console.log(chalk.blue(`\n[Telegram] Tesis Recibida de ${ctx.from.first_name}: ${msg}`));
         

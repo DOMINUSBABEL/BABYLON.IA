@@ -8,7 +8,9 @@ import { processTask } from './agent_core.js';
 
 // Configuración de Seguridad: Lista Blanca de Números Autorizados
 // Agrega aquí los IDs de WhatsApp (ej. '1234567890@c.us') que tienen permiso para ejecutar comandos.
-const AUTHORIZED_NUMBERS = process.env.AUTHORIZED_NUMBERS ? process.env.AUTHORIZED_NUMBERS.split(',').map(n => n.trim()) : [];
+const AUTHORIZED_NUMBERS = [
+    // 'tu_numero@c.us'
+];
 
 /**
  * Inicializa el cliente de WhatsApp y se conecta a la sesión.
@@ -111,32 +113,24 @@ export function initWhatsAppClient(agentEvents = null) {
         // Ignoramos mensajes vacíos a menos que tengan archivos adjuntos
         if (!msg.body && !msg.hasMedia) return;
 
-        // PREVENCIÃ“N DE BUCLE DE PENSAMIENTO (Thought Loop / Token Drain Prevention):
+        // PREVENCIÓN DE BUCLE DE PENSAMIENTO (Thought Loop / Token Drain Prevention):
         // Ignoramos los mensajes que inician con las firmas visuales o texto del propio bot.
-        // Esto evita que el bot se responda a sÃ­ mismo infinitamente.
+        // Esto evita que el bot se responda a sí mismo infinitamente.
         const msgText = msg.body ? msg.body.trim() : '';
         const botSignatures = [
-            'ðŸ§ ', 'â³', 'ðŸŸ¢', 'âš ï¸', 'âŒ', '*BABYLON.IA', '*Geist', 'He procesado', 'Procesando...', '*[Directiva'
+            '🧠', '⏳', '🟢', '⚠️', '❌', '*BABYLON.IA', '*Geist', 'He procesado', 'Procesando...', '*[Directiva'
         ];
         if (botSignatures.some(sig => msgText.startsWith(sig)) || msgText.includes('Estado del Sistema (Geist)')) {
             return;
         }
 
-        // Control de AutorizaciÃ³n ESTRICTO: Solo el dueÃ±o en su propio chat (de mÃ­ para mÃ­)
-        // o nÃºmeros en la lista blanca pueden interactuar.
-        // Esto ignora tajantemente cualquier mensaje enviado a otras personas o recibido de no autorizados.
+        // Control de Autorización: Solo el dueño (fromMe) o números en la lista blanca pueden interactuar
         const myId = client.info.wid._serialized;
-        
-        // Es un mensaje en el chat "Yo" (Guardado de mensajes)?
-        // Tanto el remitente como el destinatario deben ser myId.
         const isMeToMe = (msg.from === myId && msg.to === myId);
-        
-        // Es un mensaje de un usuario autorizado?
-        const isFromAuthorized = !msg.fromMe && (AUTHORIZED_NUMBERS.includes(msg.from) || (msg.author && AUTHORIZED_NUMBERS.includes(msg.author)));
-        
-        if (!isMeToMe && !isFromAuthorized) {
-            return;
-        }
+        const isDirectToMeFromAuthorized = msg.to === myId && AUTHORIZED_NUMBERS.includes(msg.from) && !msg.fromMe;
+        const isCommandInOtherChat = msgText.startsWith('!geist') && (msg.fromMe || AUTHORIZED_NUMBERS.includes(msg.from) || (msg.author && AUTHORIZED_NUMBERS.includes(msg.author)));
+
+        if (!isMeToMe && !isDirectToMeFromAuthorized && !isCommandInOtherChat) return;
 
         let finalPrompt = msgText;
 
@@ -149,7 +143,7 @@ export function initWhatsAppClient(agentEvents = null) {
                     if (!fs.existsSync(mediaDir)) {
                         fs.mkdirSync(mediaDir, { recursive: true });
                     }
-
+                    
                     let fileName = media.filename;
                     if (!fileName) {
                         let ext = '';
@@ -165,19 +159,19 @@ export function initWhatsAppClient(agentEvents = null) {
                         }
                         fileName = `media_${Date.now()}${ext.replace(/[^a-zA-Z0-9.]/g, '')}`;
                     }
-
+                    
                     const filePath = path.join(mediaDir, fileName);
                     fs.writeFileSync(filePath, media.data, 'base64');
-
+                    
                     console.log(chalk.yellow(`\n[!] Archivo adjunto descargado y guardado en: ${filePath}`));
-                    finalPrompt = `[ATENCIÃ“N: El usuario ha enviado un archivo multimedia/documento. El archivo fue descargado exitosamente y se encuentra en esta ruta local exacta: ${filePath} . DEBES usar obligatoriamente tu herramienta de lectura de archivos ('read_file') para abrir, leer y analizar el contenido de este archivo antes de dar una respuesta.]\n\nDirectiva del usuario: ${finalPrompt || 'Analiza el archivo adjunto.'}`;
+                    finalPrompt = `[ATENCIÓN: El usuario ha enviado un archivo multimedia/documento. El archivo fue descargado exitosamente y se encuentra en esta ruta local exacta: ${filePath} . DEBES usar obligatoriamente tu herramienta de lectura de archivos ('read_file') para abrir, leer y analizar el contenido de este archivo antes de dar una respuesta.]\n\nDirectiva del usuario: ${finalPrompt || 'Analiza el archivo adjunto.'}`;
                 }
             } catch (err) {
                 console.error(chalk.red(`Error al procesar el archivo adjunto: ${err.message}`));
             }
         }
 
-        // Si el mensaje empieza con !geist, se asume que es un comando de configuraciÃ³n/sistema
+        // Si el mensaje empieza con !geist, se asume que es un comando de configuración/sistema
         if (msgText.startsWith('!geist')) {
             console.log(chalk.magenta(`\n[+] Comando Recibido [${msg.from}]: ${msgText}`));
             const commandStr = msgText.replace('!geist', '').trim();
@@ -213,50 +207,6 @@ export function initWhatsAppClient(agentEvents = null) {
                 } else {
                     await msg.reply(`❌ *Aporía Encontrada:*\nEl archivo no existe en la ruta local proporcionada:\n_${cleanPath}_`);
                     console.log(chalk.red(`  -> Archivo no encontrado en disco.`));
-                }
-                return;
-            }
-
-            
-            // COMANDO: JULES (DelegaciÃ³n a Jules CLI)
-            if (commandStr.toLowerCase().startsWith('jules ')) {
-                const julesPrompt = commandStr.substring(6).trim();
-                console.log(chalk.blue(`  -> Solicitud de delegaciÃ³n a Jules: ${julesPrompt}`));
-                let statusMsg = await msg.reply('â³ *Iniciando Agente Jules...*\n_Delegando tarea de despliegue/auto-mejora al cluster remoto..._');
-                
-                try {
-                    const { createJulesSession } = await import('./jules_bridge.js');
-                    const output = await createJulesSession(julesPrompt);
-                    await statusMsg.reply(`ðŸŸ¢ *Jules Task Iniciada:*\n\`\`\`\n${output.substring(0, 500)}\n\`\`\`\n_Usa '!geist jules-pull <id>' cuando finalice para aplicar cambios._`);
-                } catch (err) {
-                    await statusMsg.reply(`âŒ *Error en Jules:*\n_${err.message}_`);
-                }
-                return;
-            }
-
-            // COMANDO: JULES-PULL
-            if (commandStr.toLowerCase().startsWith('jules-pull ')) {
-                const sessionId = commandStr.substring(11).trim();
-                let statusMsg = await msg.reply(`â³ *Descargando SÃ­ntesis de Jules [${sessionId}]...*`);
-                try {
-                    const { pullJulesSession } = await import('./jules_bridge.js');
-                    const output = await pullJulesSession(sessionId);
-                    await statusMsg.reply(`âœ… *SÃ­ntesis Aplicada:*\n\`\`\`\n${output.substring(0, 800)}\n\`\`\``);
-                } catch (err) {
-                    await statusMsg.reply(`âŒ *Error en Jules Pull:*\n_${err.message}_`);
-                }
-                return;
-            }
-
-            // COMANDO: JULES-LIST
-            if (commandStr.toLowerCase() === 'jules-list') {
-                let statusMsg = await msg.reply(`â³ *Consultando sesiones de Jules...*`);
-                try {
-                    const { listJulesSessions } = await import('./jules_bridge.js');
-                    const output = await listJulesSessions();
-                    await statusMsg.reply(`ðŸ“‹ *Sesiones Activas:*\n\`\`\`\n${output.substring(0, 800)}\n\`\`\``);
-                } catch (err) {
-                    await statusMsg.reply(`âŒ *Error en Jules List:*\n_${err.message}_`);
                 }
                 return;
             }

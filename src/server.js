@@ -44,7 +44,10 @@ export const agentEvents = new events.EventEmitter();
 // TUI / Readline instanciación (definido luego, pero se necesita para el prompt padding)
 let rlInterface = null;
 
+let isShuttingDown = false;
+
 console.log = function () {
+    if (isShuttingDown) return originalLog.apply(console, arguments);
     if (rlInterface) {
         process.stdout.write('\x1b[2K\x1b[0G'); // Clear current line and return to start
     }
@@ -53,7 +56,7 @@ console.log = function () {
     originalLog.apply(console, args);
 
     // Restaurar prompt de Readline después de que console.log printee algo
-    if (rlInterface) rlInterface.prompt(true);
+    if (rlInterface && !rlInterface.closed) { try { if (rlInterface.prompt) rlInterface.prompt(true); } catch(e) { rlInterface = null; } }
 
     // Enviar el texto limpio (sin códigos ANSI de tiza)
     // Usamos una regex simple para limpiar los códigos de escape ANSI
@@ -62,6 +65,7 @@ console.log = function () {
 };
 
 console.error = function () {
+    if (isShuttingDown) return originalError.apply(console, arguments);
     if (rlInterface) {
         process.stdout.write('\x1b[2K\x1b[0G'); // Clear current line
     }
@@ -69,7 +73,7 @@ console.error = function () {
     const message = args.join(' ');
     originalError.apply(console, args);
 
-    if (rlInterface) rlInterface.prompt(true);
+    if (rlInterface && !rlInterface.closed) { try { if (rlInterface.prompt) rlInterface.prompt(true); } catch(e) { rlInterface = null; } }
 
     const cleanMsg = typeof message === 'string' ? message.replace(/\u001b\[.*?m/g, '') : JSON.stringify(message);
     io.emit('system_error', cleanMsg);
@@ -83,19 +87,19 @@ function initTerminalUI() {
         prompt: chalk.hex('#FFD700').bold('BABYLON.IA > ')
     });
 
-    rlInterface.prompt();
+    if (rlInterface && !rlInterface.closed) { try { if (rlInterface.prompt) rlInterface.prompt(); } catch(e) { rlInterface = null; } }
 
     rlInterface.on('line', async (line) => {
         const input = line.trim();
         if (!input) {
-            rlInterface.prompt();
+            if (rlInterface && !rlInterface.closed) { try { if (rlInterface.prompt) rlInterface.prompt(); } catch(e) { rlInterface = null; } }
             return;
         }
 
         // TUI Comando directo
         if (input.toLowerCase() === 'exit' || input.toLowerCase() === 'quit') {
             console.log(chalk.red('Cerrando BABYLON.IA Gateway...'));
-            process.exit(0);
+            try { if (rlInterface) { rlInterface.close(); rlInterface = null; } } catch(e) {} process.exit(0);
         }
 
         console.log(chalk.cyan(`\n[~] Tesis Natural Recibida (TUI Terminal): ${input}`));
@@ -132,10 +136,12 @@ function initTerminalUI() {
             console.error(chalk.red(`[Error Procesando Tarea]: ${error.message}`));
         }
 
-        rlInterface.prompt();
+        if (rlInterface && !rlInterface.closed) { try { if (rlInterface.prompt) rlInterface.prompt(); } catch(e) { rlInterface = null; } }
     }).on('close', () => {
+        rlInterface = null;
+        isShuttingDown = true;
         console.log(chalk.red('\nSaliendo del Agente de Consola...'));
-        process.exit(0);
+        try { if (rlInterface) { rlInterface.close(); rlInterface = null; } } catch(e) {} process.exit(0);
     });
 }
 
