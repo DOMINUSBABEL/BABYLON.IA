@@ -38,7 +38,12 @@ if [ -n "$PKG_MANAGER" ]; then
     case $PKG_MANAGER in
         pkg)
             pkg update -y && pkg upgrade -y
-            pkg install -y nodejs git chromium
+            # Instalar NodeJS y Git independientemente para no bloquear si chromium falla
+            pkg install -y nodejs git
+            # Agregar repositorios necesarios para chromium en Termux
+            pkg install -y x11-repo tur-repo || true
+            pkg install -y chromium || echo "Advertencia: No se pudo instalar chromium directamente. Revisa los repositorios."
+            hash -r # Recargar hash para asegurar que npm está en PATH
             ;;
         apk)
             apk update
@@ -46,7 +51,7 @@ if [ -n "$PKG_MANAGER" ]; then
             ;;
         apt)
             sudo apt update
-            sudo apt install -y nodejs npm git chromium-browser
+            sudo apt install -y nodejs npm git chromium-browser || sudo apt install -y nodejs npm git chromium
             ;;
         brew)
             brew update
