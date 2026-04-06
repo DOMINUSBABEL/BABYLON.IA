@@ -3,6 +3,7 @@ import pkg from 'whatsapp-web.js';
 const { Client, LocalAuth, MessageMedia } = pkg;
 import chalk from 'chalk';
 import fs from 'fs';
+import path from 'path';
 import { processTask } from './agent_core.js';
 
 // Configuración de Seguridad: Lista Blanca de Números Autorizados
@@ -98,13 +99,13 @@ export function initWhatsAppClient(agentEvents = null) {
     });
 
     client.on('message_create', async (msg) => {
-        // Ignora mensajes vacíos
-        if (!msg.body) return;
+        // Ignoramos mensajes vacíos a menos que tengan archivos adjuntos
+        if (!msg.body && !msg.hasMedia) return;
 
         // PREVENCIÓN DE BUCLE DE PENSAMIENTO (Thought Loop / Token Drain Prevention):
         // Ignoramos los mensajes que inician con las firmas visuales o texto del propio bot.
         // Esto evita que el bot se responda a sí mismo infinitamente.
-        const msgText = msg.body.trim();
+        const msgText = msg.body ? msg.body.trim() : '';
         const botSignatures = [
             '🧠', '⏳', '🟢', '⚠️', '❌', '*BABYLON.IA', '*Geist', 'He procesado', 'Procesando...'
         ];
@@ -117,12 +118,51 @@ export function initWhatsAppClient(agentEvents = null) {
 
         if (!isAuthorized) return;
 
+        let finalPrompt = msgText;
+
+        // Manejo de Archivos Adjuntos (Media)
+        if (msg.hasMedia) {
+            try {
+                const media = await msg.downloadMedia();
+                if (media) {
+                    const mediaDir = path.join(process.cwd(), 'workspace', 'media');
+                    if (!fs.existsSync(mediaDir)) {
+                        fs.mkdirSync(mediaDir, { recursive: true });
+                    }
+                    
+                    let fileName = media.filename;
+                    if (!fileName) {
+                        let ext = '';
+                        if (media.mimetype) {
+                            const mimeType = media.mimetype.split(';')[0];
+                            if (mimeType === 'application/pdf') ext = '.pdf';
+                            else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') ext = '.docx';
+                            else if (mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') ext = '.xlsx';
+                            else if (mimeType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation') ext = '.pptx';
+                            else if (mimeType.startsWith('image/')) ext = '.' + mimeType.split('/')[1];
+                            else if (mimeType.startsWith('audio/')) ext = '.' + mimeType.split('/')[1].replace('ogg; codecs=opus', 'ogg');
+                            else if (mimeType.startsWith('video/')) ext = '.' + mimeType.split('/')[1];
+                        }
+                        fileName = `media_${Date.now()}${ext.replace(/[^a-zA-Z0-9.]/g, '')}`;
+                    }
+                    
+                    const filePath = path.join(mediaDir, fileName);
+                    fs.writeFileSync(filePath, media.data, 'base64');
+                    
+                    console.log(chalk.yellow(`\n[!] Archivo adjunto descargado y guardado en: ${filePath}`));
+                    finalPrompt = `[ATENCIÓN: El usuario ha enviado un archivo multimedia/documento. El archivo fue descargado exitosamente y se encuentra en esta ruta local exacta: ${filePath} . DEBES usar obligatoriamente tu herramienta de lectura de archivos ('read_file') para abrir, leer y analizar el contenido de este archivo antes de dar una respuesta.]\n\nDirectiva del usuario: ${finalPrompt || 'Analiza el archivo adjunto.'}`;
+                }
+            } catch (err) {
+                console.error(chalk.red(`Error al procesar el archivo adjunto: ${err.message}`));
+            }
+        }
+
         // Si el mensaje empieza con !geist, se asume que es un comando de configuración/sistema
-        if (msg.body.startsWith('!geist')) {
-            console.log(chalk.magenta(`\n[+] Comando Recibido [${msg.from}]: ${msg.body}`));
-            const commandStr = msg.body.replace('!geist', '').trim();
+        if (msgText.startsWith('!geist')) {
+            console.log(chalk.magenta(`\n[+] Comando Recibido [${msg.from}]: ${msgText}`));
+            const commandStr = msgText.replace('!geist', '').trim();
             
-            if (!commandStr) {
+            if (!commandStr && !msg.hasMedia) {
                  await msg.reply('⚠️ *Sintaxis Inválida:*\nEl prefijo `!geist` se usa para comandos de sistema. Ejemplos:\n- `!geist status`\n- `!geist enviar <ruta>`');
                  return;
             }
@@ -136,15 +176,15 @@ export function initWhatsAppClient(agentEvents = null) {
 
             // COMANDO: ENVIAR ARCHIVO (File Extraction)
             if (commandStr.toLowerCase().startsWith('enviar ')) {
-                const filePath = commandStr.replace(/enviar /i, '').trim();
-                console.log(chalk.blue(`  -> Solicitud de extracción de archivo: ${filePath}`));
+                const filePathStr = commandStr.replace(/enviar /i, '').trim();
+                console.log(chalk.blue(`  -> Solicitud de extracción de archivo: ${filePathStr}`));
                 
                 // Formatear rutas si es necesario y verificar existencia
-                const cleanPath = filePath.replace(/^"|"$/g, ''); // Quitar comillas si el usuario las pone
+                const cleanPath = filePathStr.replace(/^"|"$/g, ''); // Quitar comillas si el usuario las pone
                 if (fs.existsSync(cleanPath)) {
                     try {
-                        const media = MessageMedia.fromFilePath(cleanPath);
-                        await client.sendMessage(msg.from, media, { caption: `*Geist File Extractor:*\nAquí tienes el documento solicitado de tu PC.` });
+                        const outMedia = MessageMedia.fromFilePath(cleanPath);
+                        await client.sendMessage(msg.from, outMedia, { caption: `*Geist File Extractor:*\nAquí tienes el documento solicitado de tu PC.` });
                         console.log(chalk.green(`  -> Archivo enviado exitosamente por WhatsApp.`));
                     } catch (err) {
                         await msg.reply(`❌ *Error del Sistema:*\nNo se pudo enviar el archivo por peso o formato inválido.\n_Detalle: ${err.message}_`);
@@ -161,7 +201,8 @@ export function initWhatsAppClient(agentEvents = null) {
             console.log(chalk.blue('  -> Iniciando Bucle Dialéctico Forzado (System Directive)...'));
             let statusMsg = await msg.reply('⏳ *Iniciando Bucle Dialéctico Forzado...*');
 
-            const response = await processTask(commandStr, (progressText) => {
+            // Usamos finalPrompt que incluye los posibles adjuntos
+            const response = await processTask(finalPrompt.replace('!geist', '').trim(), (progressText) => {
                 console.log(chalk.yellow(`     [Geist] ${progressText}`));
             });
 
@@ -172,11 +213,11 @@ export function initWhatsAppClient(agentEvents = null) {
         }
 
         // PROCESAMIENTO DE LENGUAJE NATURAL (Sin prefijo)
-        console.log(chalk.cyan(`\n[~] Tesis Natural Recibida [${msg.from}]: ${msg.body}`));
+        console.log(chalk.cyan(`\n[~] Tesis Natural Recibida [${msg.from}]: ${msgText}${msg.hasMedia ? ' [CON ARCHIVO ADJUNTO]' : ''}`));
         let naturalStatusMsg = await msg.reply('🧠 *Procesando...*');
 
         try {
-            const response = await processTask(msg.body, (progressText) => {
+            const response = await processTask(finalPrompt, (progressText) => {
                 console.log(chalk.gray(`     [LLM/Geist] ${progressText}`));
             });
 
