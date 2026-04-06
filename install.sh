@@ -71,7 +71,7 @@ else
 fi
 
 # Clonar si no estamos en el directorio
-if [ ! -f "package.json" ] || ! grep -q '"name": "babylon.ia"' package.json; then
+if [ ! -f "package.json" ] || ! grep -q '"name": "babylonia"' package.json; then
     echo "[2/4] Clonando el repositorio BABYLON.IA..."
     if [ -d "BABYLON.IA" ]; then
         rm -rf BABYLON.IA
@@ -102,9 +102,9 @@ npm install
 
 echo "[4/4] Enlazando CLI globalmente (npm link)..."
 if [ "$PKG_MANAGER" = "apt" ] || [ "$PKG_MANAGER" = "dnf" ] || [ "$PKG_MANAGER" = "pacman" ] || [ "$PKG_MANAGER" = "apk" ]; then
-    sudo npm link 2>/dev/null || npm link
+    sudo npm link --force 2>/dev/null || npm link --force
 else
-    npm link
+    npm link --force
 fi
 
 echo "====================================================="

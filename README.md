@@ -171,7 +171,7 @@ cd BABYLON.IA
 export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 export PUPPETEER_EXECUTABLE_PATH="/data/data/com.termux/files/usr/bin/chromium-browser"
 npm install
-npm link
+npm link --force
 ```
 
 **OAuth Authentication & Edge Models Setup:**
