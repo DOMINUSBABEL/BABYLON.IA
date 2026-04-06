@@ -32,7 +32,7 @@ export async function processTask(prompt, updateProgress) {
     // Fase 2: ANTÍTESIS (Ejecución y Resolución de Conflictos)
     updateProgress("Antítesis (Estructuración): Integrando contexto del Tesauro Conceptual y resolviendo dependencias de la consulta...");
     
-    const babiloniaPath = "C:\\Users\\jegom\\OneDrive\\Desktop\\Investigaciones\\geist\\Sintesis_Babilonia_China";
+    const babiloniaPath = process.env.LEGACY_KNOWLEDGE_DIR || "C:\\Users\\jegom\\OneDrive\\Desktop\\Investigaciones\\geist\\Sintesis_Babilonia_China";
     let knowledgeStatus = "Wiki Memory Activa";
     
     if (fs.existsSync(babiloniaPath)) {
@@ -51,7 +51,8 @@ export async function processTask(prompt, updateProgress) {
             updateProgress(`Antítesis (Ollama): Enrutando inferencia hacia servicio Ollama local para modelo ${activeModel}...`);
             const ollamaModelName = activeModel.replace('ollama:', '');
             
-            const response = await fetch('http://localhost:11434/api/generate', {
+            const ollamaHost = process.env.OLLAMA_HOST || 'http://localhost:11434';
+            const response = await fetch(`${ollamaHost}/api/generate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -75,8 +76,8 @@ export async function processTask(prompt, updateProgress) {
             const geminiBin = process.platform === 'win32' ? 'gemini.cmd' : 'gemini';
             
             // Pasamos el comando como un solo string para evitar el DeprecationWarning de Node al usar shell: true con arrays
-            const geminiProcess = spawn(`${geminiBin} -m ${activeModel} -p " " -o json`, { 
-                shell: true
+            const geminiProcess = spawn(geminiBin, ['-m', activeModel, '-p', ' ', '-o', 'json'], {
+                shell: process.platform === 'win32'
             });
 
             let stdoutData = '';

@@ -107,7 +107,12 @@ export class WikiMemory {
 
         // Mantener el archivo ligero truncándolo si es muy grande (ej > 5000 chars)
         if (history.length > 5000) {
-            history = history.substring(history.length - 3000); // Se queda con la última parte
+            const entries = history.split(/(?=\n## \[)/);
+            if (entries.length > 10) {
+                history = entries[0] + entries.slice(-10).join('');
+            } else {
+                history = history.substring(history.length - 4000); // Fallback si no hay suficientes separadores
+            }
         }
 
         this.writeConcept('Historial_Reciente', history + newEntry);

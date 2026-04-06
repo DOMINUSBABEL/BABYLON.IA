@@ -1,3 +1,4 @@
+import open from 'open';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -46,7 +47,7 @@ export async function getGeminiOAuthToken() {
         console.log(`[!] Por favor, ejecuta 'gemini login' en tu terminal y completa el proceso en el navegador.`);
 
         // As a fallback/help we can open the Google AI Studio page to get the user started if they prefer API Keys
-        openBrowser('https://aistudio.google.com/app/apikey');
+        open('https://aistudio.google.com/app/apikey').catch(e => console.error("Error abriendo el navegador:", e));
 
         throw new Error(`No se encontró el archivo de credenciales. Debes iniciar sesión con Gemini CLI primero.`);
     }

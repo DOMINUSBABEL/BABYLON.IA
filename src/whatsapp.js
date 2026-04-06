@@ -8,9 +8,7 @@ import { processTask } from './agent_core.js';
 
 // Configuración de Seguridad: Lista Blanca de Números Autorizados
 // Agrega aquí los IDs de WhatsApp (ej. '1234567890@c.us') que tienen permiso para ejecutar comandos.
-const AUTHORIZED_NUMBERS = [
-    // 'tu_numero@c.us'
-];
+const AUTHORIZED_NUMBERS = process.env.AUTHORIZED_NUMBERS ? process.env.AUTHORIZED_NUMBERS.split(',').map(n => n.trim()) : [];
 
 /**
  * Inicializa el cliente de WhatsApp y se conecta a la sesión.
