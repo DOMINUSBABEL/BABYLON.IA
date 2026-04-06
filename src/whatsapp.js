@@ -104,10 +104,11 @@ export function initWhatsAppClient(agentEvents = null) {
         // PREVENCIÓN DE BUCLE DE PENSAMIENTO (Thought Loop / Token Drain Prevention):
         // Ignoramos los mensajes que inician con las firmas visuales o texto del propio bot.
         // Esto evita que el bot se responda a sí mismo infinitamente.
+        const msgText = msg.body.trim();
         const botSignatures = [
-            '🧠', '⏳', '🟢', '⚠️', '❌', '*BABYLON.IA', '*Geist', 'He procesado'
+            '🧠', '⏳', '🟢', '⚠️', '❌', '*BABYLON.IA', '*Geist', 'He procesado', 'Procesando...'
         ];
-        if (botSignatures.some(sig => msg.body.startsWith(sig))) {
+        if (botSignatures.some(sig => msgText.startsWith(sig)) || msgText.includes('Estado del Sistema (Geist)')) {
             return;
         }
 
