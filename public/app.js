@@ -10,13 +10,21 @@ const waStatus = document.getElementById('wa-status');
 const agentStatus = document.getElementById('agent-status');
 
 const terminalOutput = document.getElementById('terminal-output');
+const reasoningOutput = document.getElementById('reasoning-output');
+const reasoningStatus = document.getElementById('reasoning-status');
 const commandForm = document.getElementById('command-form');
 const cmdInput = document.getElementById('cmd-input');
 const clearBtn = document.getElementById('clear-btn');
 
+let currentTaskSteps = 0;
+
 // Auto-scroll de la terminal
 function scrollToBottom() {
     terminalOutput.scrollTop = terminalOutput.scrollHeight;
+}
+
+function scrollReasoningToBottom() {
+    reasoningOutput.scrollTop = reasoningOutput.scrollHeight;
 }
 
 // Agregar log a la terminal
@@ -94,14 +102,43 @@ socket.on('system_error', (msg) => {
 // Actualizaciones de estado del agente
 socket.on('agent_status', (status) => {
     agentStatus.textContent = status;
+    if (status === 'Pensando...') {
+        reasoningStatus.innerHTML = '<i class="fa-solid fa-circle fa-beat text-blue-500 text-[10px] mr-1"></i> Procesando';
+        reasoningOutput.innerHTML = ''; // Limpiar panel anterior
+        currentTaskSteps = 0;
+    } else if (status === 'En espera de directivas') {
+        reasoningStatus.innerHTML = '<i class="fa-solid fa-circle text-green-500 text-[10px] mr-1"></i> Terminado';
+    } else if (status === 'Error') {
+        reasoningStatus.innerHTML = '<i class="fa-solid fa-circle text-red-500 text-[10px] mr-1"></i> Error';
+    }
 });
 
 socket.on('agent_progress', (msg) => {
-    appendLog(`[Geist] ${msg}`, 'warning');
+    // Ya no lo enviamos al log general, lo ponemos en el panel de razonamiento como pasos (Queue Orders)
+    currentTaskSteps++;
+    const stepDiv = document.createElement('div');
+    stepDiv.className = 'flex items-start gap-2 mb-2 p-2 bg-blue-900/10 border border-blue-500/20 rounded animate-fade-in text-blue-300';
+    stepDiv.innerHTML = `
+        <span class="text-blue-500 font-bold">[${currentTaskSteps}]</span>
+        <span class="flex-grow">${msg}</span>
+        <i class="fa-solid fa-check text-green-500 mt-1 opacity-50"></i>
+    `;
+    reasoningOutput.appendChild(stepDiv);
+    scrollReasoningToBottom();
 });
 
 socket.on('agent_response', (msg) => {
-    appendLog(`[Síntesis]:\n${msg}`, 'success');
+    appendLog(`[Síntesis Completada]:\n${msg}`, 'success');
+
+    // Agregar un paso final al panel de razonamiento
+    const stepDiv = document.createElement('div');
+    stepDiv.className = 'flex items-start gap-2 mt-4 p-2 bg-green-900/20 border border-green-500/50 rounded text-green-400';
+    stepDiv.innerHTML = `
+        <i class="fa-solid fa-flag-checkered mt-1 text-yellow-500"></i>
+        <span class="flex-grow font-bold">Proceso Finalizado. Síntesis enviada al canal de origen.</span>
+    `;
+    reasoningOutput.appendChild(stepDiv);
+    scrollReasoningToBottom();
 });
 
 // Interacciones UI

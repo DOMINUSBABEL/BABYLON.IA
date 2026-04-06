@@ -14,6 +14,8 @@ import { initTelegramBot } from './telegram.js';
 import { initTwitterBot } from './twitter.js';
 import { processTask } from './agent_core.js';
 import dotenv from 'dotenv';
+import boxen from 'boxen';
+import logUpdate from 'log-update';
 
 dotenv.config();
 
@@ -98,9 +100,27 @@ function initTerminalUI() {
         console.log(chalk.cyan(`\n[~] Tesis Natural Recibida (TUI Terminal): ${input}`));
 
         try {
+            // Buffer to store reasoning steps for TUI panel
+            let reasoningSteps = [];
+
             const response = await processTask(input, (progressText) => {
-                console.log(chalk.gray(`     [LLM/Geist] ${progressText}`));
+                reasoningSteps.push(`• ${progressText}`);
+
+                // Re-render the reasoning box dynamically using log-update
+                const reasoningBox = boxen(reasoningSteps.join('\n'), {
+                    title: chalk.hex('#ffd700').bold('🧠 Flujo de Razonamiento Geist'),
+                    titleAlignment: 'left',
+                    padding: 1,
+                    margin: { top: 1, bottom: 1 },
+                    borderColor: '#0000ff',
+                    borderStyle: 'round'
+                });
+
+                logUpdate(reasoningBox);
             });
+
+            // Finalizar la actualización en vivo
+            logUpdate.done();
 
             console.log(chalk.green('  -> Síntesis natural generada (Terminal).'));
             console.log(`\n*BABYLON.IA (TUI)*:\n${response}\n`);
@@ -135,11 +155,26 @@ io.on('connection', (socket) => {
         io.emit('agent_status', 'Pensando...');
         
         try {
+            let webReasoningSteps = [];
             const response = await processTask(cmd, (progressText) => {
-                console.log(chalk.yellow(`     [Geist] ${progressText}`));
+                webReasoningSteps.push(`• ${progressText}`);
+
+                // Re-render the reasoning box dynamically using log-update for web requests too
+                const reasoningBox = boxen(webReasoningSteps.join('\n'), {
+                    title: chalk.hex('#ffd700').bold('🧠 Flujo de Razonamiento Geist (Web)'),
+                    titleAlignment: 'left',
+                    padding: 1,
+                    margin: { top: 1, bottom: 1 },
+                    borderColor: '#0000ff',
+                    borderStyle: 'round'
+                });
+
+                logUpdate(reasoningBox);
                 io.emit('agent_progress', progressText);
             });
             
+            logUpdate.done();
+
             console.log(chalk.green('  -> Síntesis generada (Web).'));
             io.emit('agent_response', response);
             io.emit('agent_status', 'En espera de directivas');

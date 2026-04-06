@@ -78,21 +78,42 @@
             
         </div>
 
-        <!-- Right Column: Terminal Output -->
-        <div class="lg:col-span-2 bg-black border border-green-500/20 rounded-lg shadow-lg flex flex-col overflow-hidden">
-            <div class="bg-gray-900 border-b border-green-500/20 p-3 flex justify-between items-center">
-                <h2 class="text-sm font-semibold text-gray-300">
-                    <i class="fa-solid fa-server text-green-500 mr-2"></i> Registro del Sistema (Geist Stream)
-                </h2>
-                <button id="clear-btn" class="text-xs text-gray-500 hover:text-green-400 transition-colors" title="Limpiar Consola">
-                    <i class="fa-solid fa-eraser"></i> Limpiar
-                </button>
-            </div>
+        <!-- Right Column: System Logs & Reasoning Panel -->
+        <div class="lg:col-span-2 flex flex-col gap-6">
             
-            <div id="terminal-output" class="flex-grow p-4 overflow-y-auto bg-[#0a0a0a] text-sm leading-relaxed max-h-[650px] font-mono whitespace-pre-wrap break-words">
-                <!-- Terminal logs will appear here -->
-                <div class="text-gray-500 mb-2">Bucle dialéctico inicializado. Esperando flujos de datos...</div>
+            <!-- Reasoning Panel -->
+            <div class="bg-black border border-blue-500/30 rounded-lg shadow-[0_0_15px_rgba(0,0,255,0.1)] flex flex-col overflow-hidden h-[300px]">
+                <div class="bg-gray-900 border-b border-blue-500/30 p-3 flex justify-between items-center">
+                    <h2 class="text-sm font-bold text-yellow-500">
+                        <i class="fa-solid fa-brain text-blue-500 mr-2"></i> Flujo de Razonamiento Geist
+                    </h2>
+                    <div id="reasoning-status" class="text-xs text-gray-400">
+                        <i class="fa-solid fa-circle text-gray-600 text-[10px] mr-1"></i> Inactivo
+                    </div>
+                </div>
+                <div id="reasoning-output" class="flex-grow p-4 overflow-y-auto bg-[#050510] text-sm leading-relaxed font-mono whitespace-pre-wrap break-words">
+                    <!-- Reasoning steps will appear here as queue orders -->
+                    <div class="text-blue-900/50 mb-2 italic">Esperando tareas y directivas...</div>
+                </div>
             </div>
+
+            <!-- Terminal Output -->
+            <div class="bg-black border border-green-500/20 rounded-lg shadow-lg flex flex-col overflow-hidden flex-grow h-[350px]">
+                <div class="bg-gray-900 border-b border-green-500/20 p-3 flex justify-between items-center">
+                    <h2 class="text-sm font-semibold text-gray-300">
+                        <i class="fa-solid fa-server text-green-500 mr-2"></i> Registro del Sistema
+                    </h2>
+                    <button id="clear-btn" class="text-xs text-gray-500 hover:text-green-400 transition-colors" title="Limpiar Consola">
+                        <i class="fa-solid fa-eraser"></i> Limpiar
+                    </button>
+                </div>
+
+                <div id="terminal-output" class="flex-grow p-4 overflow-y-auto bg-[#0a0a0a] text-sm leading-relaxed font-mono whitespace-pre-wrap break-words">
+                    <!-- Terminal logs will appear here -->
+                    <div class="text-gray-500 mb-2">Bucle dialéctico inicializado. Esperando flujos de datos...</div>
+                </div>
+            </div>
+
         </div>
 
     </main>

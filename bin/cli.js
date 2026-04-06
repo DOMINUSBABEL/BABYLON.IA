@@ -25,60 +25,59 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function showBanner() {
     console.clear();
     CFonts.say('BABYLON.IA', {
-        font: 'block',              // define the font face
-        align: 'center',            // define text alignment
-        colors: ['cyan', 'yellow'], // define all colors
-        background: 'transparent',  // define the background color
-        letterSpacing: 1,           // define letter spacing
-        lineHeight: 1,              // define the line height
-        space: true,                // define if the output text should have empty lines on top and on the bottom
-        maxLength: '0',             // define how many character can be on one line
-        gradient: false,            // define your two gradient colors
-        independentGradient: false, // define if you want to recalculate the gradient for each new line
-        transitionGradient: false,  // define if this is a transition between colors directly
-        env: 'node'                 // define the environment cfonts is being executed in
+        font: 'block',
+        align: 'center',
+        colors: ['#00aaff', '#ffd700'],
+        background: 'transparent',
+        letterSpacing: 1,
+        lineHeight: 1,
+        space: true,
+        maxLength: '0',
+        gradient: ['#0000ff', '#ffd700'],
+        independentGradient: false,
+        transitionGradient: true,
+        env: 'node'
     });
 
-    const tower = [
-        "                                    .::::.                                      ",
-        "                                   /++++++\\                                     ",
-        "                                  /++++++++\\                                    ",
-        "                                 |==========|                                   ",
-        "                                /++++++++++++\\                                  ",
-        "                               /++++++++++++++\\                                 ",
-        "                              |================|                                ",
-        "                             /++++++++++++++++++\\                               ",
-        "                            /++++++++++++++++++++\\                              ",
-        "                           |======================|                             ",
-        "                          /++++++++++++++++++++++++\\                            ",
-        "                         /++++++++++++++++++++++++++\\                           ",
-        "                        |============================|                          ",
-        "                       /++++++++++++++++++++++++++++++\\                         ",
-        "                      /++++++++++++++++++++++++++++++++\\                        ",
-        "                     |==================================|                       ",
-        "                    /++++++++++++++++++++++++++++++++++++\\                      ",
-        "                   /++++++++++++++++++++++++++++++++++++++\\                     ",
-        "                  |========================================|                    ",
-        "                 /++++++++++++++++++++++++++++++++++++++++++\\                   ",
-        "                /++++++++++++++++++++++++++++++++++++++++++++\\                  ",
-        "               |==============================================|                 ",
-        "              /++++++++++++++++++++++++++++++++++++++++++++++++\\                ",
-        "             /++++++++++++++++++++++++++++++++++++++++++++++++++\\               ",
-        "            |====================================================|              ",
-        "           /++++++++++++++++++++++++++++++++++++++++++++++++++++++\\             ",
-        "          /++++++++++++++++++++++++++++++++++++++++++++++++++++++++\\            ",
-        "         |==========================================================|           "
+    const city = [
+        "                                                                                    ",
+        "                                       .::::.                                       ",
+        "                                      /++++++\\                                      ",
+        "                                     /++++++++\\                                     ",
+        "                                    |==========|                                    ",
+        "                                   /++++++++++++\\                                   ",
+        "                   ._.            /++++++++++++++\\             ._.                  ",
+        "                   | |           |================|            | |                  ",
+        "                 _ | | _        /++++++++++++++++++\\         _ | | _                ",
+        "                / \\| |/ \\      /++++++++++++++++++++\\       / \\| |/ \\               ",
+        "                |=======|     |======================|      |=======|               ",
+        "               /+++++++++\\   /++++++++++++++++++++++++\\    /+++++++++\\              ",
+        "               |=========|  /++++++++++++++++++++++++++\\   |=========|              ",
+        "              /+++++++++++\\|============================| /+++++++++++\\             ",
+        "              |===========/++++++++++++++++++++++++++++++\\|===========|             ",
+        "             /+++++++++++/++++++++++++++++++++++++++++++++\\++++++++++++\\            ",
+        "             |==========|==================================|===========|            ",
+        "            /++++++++++/++++++++++++++++++++++++++++++++++++\\+++++++++++\\           ",
+        "    .       |=========/++++++++++++++++++++++++++++++++++++++\\==========|      .    ",
+        "   / \\     /+++++++++|========================================|++++++++++\\    / \\   ",
+        "  /   \\    |========/++++++++++++++++++++++++++++++++++++++++++\\=========|   /   \\  ",
+        " /_____\\  /++++++++/++++++++++++++++++++++++++++++++++++++++++++\\+++++++++\\ /_____\\ ",
+        " |=====|  |=======|==============================================|========| |=====| ",
+        "/+++++++\\/+++++++/++++++++++++++++++++++++++++++++++++++++++++++++\\++++++++\\/+++++++\\",
+        "|=======||======/++++++++++++++++++++++++++++++++++++++++++++++++++\\=======||=======|",
+        "|       ||     |====================================================|      ||       |",
+        "|_______||____/++++++++++++++++++++++++++++++++++++++++++++++++++++++\\_____||_______|"
     ];
 
-    // Gradiente dinámico de Cyan a Oro pasando por Azul Profundo
-    const cyberGradient = gradient(['#00ffff', '#00aaff', '#ffd700']); 
+    // Gradiente dinámico de Azul a Oro
+    const babylonGradient = gradient(['#0000aa', '#0000ff', '#ffd700']);
 
-    for (let line of tower) {
-        console.log(cyberGradient(line));
-        await sleep(40); // Delay para la animación tipo escaneo
+    for (let line of city) {
+        console.log(babylonGradient(line));
+        await sleep(30); // Delay para la animación
     }
 
-    console.log(chalk.yellow.bold('\\n          ::: ARCHITECTURE GEIST // OMNI-CHANNEL :::\\n'));
+    console.log(chalk.hex('#ffd700').bold('\n               ::: ARCHITECTURE GEIST // OMNI-CHANNEL :::\n'));
     await sleep(300);
 }
 
