@@ -101,14 +101,21 @@ export function initWhatsAppClient(agentEvents = null) {
         // Ignora mensajes vacíos
         if (!msg.body) return;
 
-        // Control de Autorización: Solo el dueño (fromMe) o números en la lista blanca pueden ejecutar !geist
+        // Control de Autorización: Solo el dueño (fromMe) o números en la lista blanca pueden interactuar
         const isAuthorized = msg.fromMe || AUTHORIZED_NUMBERS.includes(msg.from);
 
-        // Verifica si el mensaje contiene el comando trigger
-        if (msg.body.startsWith('!geist') && isAuthorized) {
-            console.log(chalk.magenta(`\n[+] Tesis Recibida [${msg.from}]: ${msg.body}`));
+        if (!isAuthorized) return;
+
+        // Si el mensaje empieza con !geist, se asume que es un comando de configuración/sistema
+        if (msg.body.startsWith('!geist')) {
+            console.log(chalk.magenta(`\n[+] Comando Recibido [${msg.from}]: ${msg.body}`));
             const commandStr = msg.body.replace('!geist', '').trim();
             
+            if (!commandStr) {
+                 await msg.reply('⚠️ *Sintaxis Inválida:*\nEl prefijo `!geist` se usa para comandos de sistema. Ejemplos:\n- `!geist status`\n- `!geist enviar <ruta>`');
+                 return;
+            }
+
             // COMANDO: STATUS
             if (commandStr.toLowerCase() === 'status') {
                 console.log(chalk.blue('  -> Solicitud de estado recibida.'));
@@ -139,20 +146,34 @@ export function initWhatsAppClient(agentEvents = null) {
                 return;
             }
 
-            // COMANDO GENERAL: BUCLE DIALÉCTICO (OpenClaw / Gemini)
-            if (commandStr) {
-                console.log(chalk.blue('  -> Iniciando Bucle Dialéctico (Hegel-Escohotado)...'));
-                let statusMsg = await msg.reply('⏳ *Iniciando Bucle Dialéctico...*\n_Evaluando la directiva con el modelo interno..._');
+            // Si es un comando con !geist pero no es status ni enviar, igual lo mandamos al bucle
+            console.log(chalk.blue('  -> Iniciando Bucle Dialéctico Forzado (System Directive)...'));
+            let statusMsg = await msg.reply('⏳ *Iniciando Bucle Dialéctico Forzado...*');
 
-                const response = await processTask(commandStr, (progressText) => {
-                    console.log(chalk.yellow(`     [Geist] ${progressText}`));
-                });
+            const response = await processTask(commandStr, (progressText) => {
+                console.log(chalk.yellow(`     [Geist] ${progressText}`));
+            });
 
-                console.log(chalk.green('  -> Síntesis generada. Respondiendo al usuario.'));
-                await statusMsg.reply(`*BABYLON.IA (Síntesis)*:\n${response}`);
-            } else {
-                await msg.reply('⚠️ *Sintaxis Inválida:*\nDebes incluir una directiva. Ejemplo: `!geist analiza los archivos financieros`.');
-            }
+            console.log(chalk.green('  -> Síntesis generada. Respondiendo al usuario.'));
+            await statusMsg.reply(`*BABYLON.IA (System)*:\n${response}`);
+
+            return;
+        }
+
+        // PROCESAMIENTO DE LENGUAJE NATURAL (Sin prefijo)
+        console.log(chalk.cyan(`\n[~] Tesis Natural Recibida [${msg.from}]: ${msg.body}`));
+        let naturalStatusMsg = await msg.reply('🧠 *Procesando...*');
+
+        try {
+            const response = await processTask(msg.body, (progressText) => {
+                console.log(chalk.gray(`     [LLM/Geist] ${progressText}`));
+            });
+
+            console.log(chalk.green('  -> Síntesis natural generada. Respondiendo.'));
+            await naturalStatusMsg.reply(response);
+        } catch (error) {
+            console.error(chalk.red(`Error en el procesamiento natural: ${error.message}`));
+            await naturalStatusMsg.reply(`❌ *Error cognitivo:*\nNo he podido procesar tu solicitud adecuadamente.\n_Detalle: ${error.message}_`);
         }
     });
 

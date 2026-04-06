@@ -140,10 +140,26 @@ babylonia dashboard
 Upon execution of `babylonia gateway`, the system starts the selected platforms based on your `.env` configuration.
 
 1. **Link Devices:** Scan the QR code using WhatsApp or start a chat with your configured Telegram Bot. Alternatively, open the Web Dashboard.
-2. **Issue Directives:** Send a command to the agent.
-   - `!geist Eres libre. Inicia el protocolo de comercio espontáneo.`
-   - `!geist status` (to check the health of the engine).
+2. **Issue Directives:** You can chat naturally with the agent, or use direct commands.
 3. **Autonomous Execution:** BABYLON.IA will take control of its Sandbox/Workspace, process the directive through its dialectical loop, and respond via the same platform upon task completion.
+
+### Exhaustive Command List
+
+#### 💻 CLI Commands (Terminal)
+These commands are executed in your system terminal using the globally linked `babylonia` binary.
+- `babylonia onboard`: Starts the interactive configuration sequence (Agent setup, Platform linking, Model selection).
+- `babylonia gateway`: Starts the main OpenClaw engine, the active platforms (WhatsApp, Telegram, etc.), and the Web Dashboard.
+- `babylonia dashboard`: Opens the web control panel directly in your default browser.
+- `babylonia --help` / `-h`: Displays help information and the list of available CLI commands.
+- `babylonia --version` / `-V`: Displays the current version of the CLI.
+
+#### 📱 Platform Commands (WhatsApp / Telegram)
+By default, any natural language message sent by an authorized user is processed directly by the AI. The `!geist` prefix is strictly reserved for core system configuration and direct hardware execution commands.
+
+- **Natural Language Input:** Simply type your prompt (e.g., *"Analiza los archivos financieros"*, *"Resume nuestro último proyecto"*). The agent will process it via the LLM.
+- `!geist status`: Returns a real-time health report of the OpenClaw Engine, the LLM Auth-Bridge, and the Geist Architecture environment.
+- `!geist enviar <absolute_path>`: Directly instructs the system to extract a local file from the host PC and send it as a media file to the chat (e.g., `!geist enviar "C:\Users\Documents\report.pdf"`).
+- `!geist <direct_system_directive>`: Can be used to bypass natural dialogue and force a direct execution through the dialectical loop.
 
 ---
 
