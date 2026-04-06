@@ -98,6 +98,7 @@ The system is designed for deployment on any Node.js environment, including low-
 - Node.js installed (v18+ recommended).
 - Gemini CLI authenticated (`gemini login`) OR a Gemini API Key.
 - Optional: Ollama installed for local Open-Source Models (Gemma, Qwen).
+- Optional: Google AI Edge Gallery models (Gemma 4 E2B or E4B) downloaded and configured with a compatible backend (e.g. MediaPipe, Llama.cpp) for low-resource environments (Android, Windows, macOS, Linux).
 - Git for cloning the repository.
 
 ### 5.2 Installation Steps & Macro Interoperability
@@ -142,6 +143,9 @@ export PUPPETEER_EXECUTABLE_PATH="/data/data/com.termux/files/usr/bin/chromium-b
 npm install
 npm link
 ```
+
+**OAuth Authentication & Edge Models Setup:**
+During the setup, especially for OAuth logins (e.g., Gemini) or localized backend services (Ollama, AI Edge Gallery), the system will attempt to open your browser to finalize the authorization or point you to local dashboards. Ensure your local services are running and accessible on their respective ports.
 
 ### 5.3 System Boot & Configuration
 

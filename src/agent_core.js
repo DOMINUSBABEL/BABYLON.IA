@@ -41,6 +41,14 @@ export async function processTask(prompt, updateProgress) {
                 knowledgeStatus += " | Operando en modo de inferencia pura con Tesauro local.";
             }
 
+            // Check for edge models to output specific logging
+            const activeModel = process.env.GEMINI_MODEL || 'default';
+            if (activeModel.startsWith('aiedge:')) {
+                updateProgress(`Antítesis (AI Edge): Enrutando inferencia hacia backend local para modelo ${activeModel}...`);
+            } else if (activeModel.startsWith('ollama:')) {
+                updateProgress(`Antítesis (Ollama): Enrutando inferencia hacia servicio Ollama local para modelo ${activeModel}...`);
+            }
+
             setTimeout(() => {
                 // Fase 3: SÍNTESIS (Resultado)
                 updateProgress("Síntesis (Conclusión): Empaquetando resultado y ejecutando Heartbeat de Memoria en disco.");
@@ -49,6 +57,7 @@ export async function processTask(prompt, updateProgress) {
                 const result = `He procesado tu directiva: "${prompt}".\n\n` +
                                `*🧠 Estado del Sistema (Geist):*\n` +
                                `- Motor OpenClaw: Activo y Enlazado\n` +
+                               `- Modelo Activo: ${activeModel}\n` +
                                `- Token OAuth / LLM: Validado\n` +
                                `- Memoria Base: ${knowledgeStatus}\n` +
                                `- Entorno: ${process.env.OS_TARGET || 'Desconocido'}\n\n` +
