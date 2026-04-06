@@ -130,7 +130,7 @@ export function initWhatsAppClient(agentEvents = null) {
             // COMANDO: STATUS
             if (commandStr.toLowerCase() === 'status') {
                 console.log(chalk.blue('  -> Solicitud de estado recibida.'));
-                await msg.reply('🟢 *BABYLON.IA Status:*\n- Motor OpenClaw: ONLINE\n- Token OAuth: ACTIVO\n- Bucle Dialéctico: Operativo.\n- Entorno: Windows 11 (Geist Node)');
+                await msg.reply('🟢 *BABYLON.IA Status:*\n- Motor Gemini CLI: ONLINE\n- Token OAuth: ACTIVO\n- Bucle Dialéctico: Operativo.\n- Entorno: Windows 11 (Geist Node)');
                 return;
             }
 
