@@ -122,16 +122,21 @@ export function initWhatsAppClient(agentEvents = null) {
             return;
         }
 
-        // Control de AutorizaciÃ³n: Solo el dueÃ±o en su propio chat (fromMe a sÃ­ mismo) 
+        // Control de AutorizaciÃ³n ESTRICTO: Solo el dueÃ±o en su propio chat (de mÃ­ para mÃ­)
         // o nÃºmeros en la lista blanca pueden interactuar.
-        // Esto previene que el bot responda a mensajes que el dueÃ±o envÃ­a a otras personas.
+        // Esto ignora tajantemente cualquier mensaje enviado a otras personas o recibido de no autorizados.
         const myId = client.info.wid._serialized;
-        const isFromMeToMe = msg.fromMe && msg.to === myId;
+        
+        // Es un mensaje en el chat "Yo" (Guardado de mensajes)?
+        // Tanto el remitente como el destinatario deben ser myId.
+        const isMeToMe = (msg.from === myId && msg.to === myId);
+        
+        // Es un mensaje de un usuario autorizado?
         const isFromAuthorized = !msg.fromMe && (AUTHORIZED_NUMBERS.includes(msg.from) || (msg.author && AUTHORIZED_NUMBERS.includes(msg.author)));
         
-        const isAuthorizedChannel = isFromMeToMe || isFromAuthorized;
-
-        if (!isAuthorizedChannel) return;
+        if (!isMeToMe && !isFromAuthorized) {
+            return;
+        }
 
         let finalPrompt = msgText;
 
