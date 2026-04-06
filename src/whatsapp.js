@@ -101,6 +101,16 @@ export function initWhatsAppClient(agentEvents = null) {
         // Ignora mensajes vacíos
         if (!msg.body) return;
 
+        // PREVENCIÓN DE BUCLE DE PENSAMIENTO (Thought Loop / Token Drain Prevention):
+        // Ignoramos los mensajes que inician con las firmas visuales o texto del propio bot.
+        // Esto evita que el bot se responda a sí mismo infinitamente.
+        const botSignatures = [
+            '🧠', '⏳', '🟢', '⚠️', '❌', '*BABYLON.IA', '*Geist', 'He procesado'
+        ];
+        if (botSignatures.some(sig => msg.body.startsWith(sig))) {
+            return;
+        }
+
         // Control de Autorización: Solo el dueño (fromMe) o números en la lista blanca pueden interactuar
         const isAuthorized = msg.fromMe || AUTHORIZED_NUMBERS.includes(msg.from);
 
