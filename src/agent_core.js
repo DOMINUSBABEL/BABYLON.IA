@@ -2,7 +2,10 @@ import chalk from 'chalk';
 import fs from 'fs';
 import path from 'path';
 import { WikiMemory } from './wiki_memory.js';
-import { getGeminiOAuthToken } from './auth.js';
+import { exec } from 'child_process';
+import util from 'util';
+
+const execPromise = util.promisify(exec);
 
 let wikiMemoryInstance = null;
 
@@ -61,42 +64,29 @@ export async function processTask(prompt, updateProgress) {
             llmResponseText = data.response;
 
         } else {
-            updateProgress(`Antítesis (Gemini): Enrutando inferencia hacia backend para modelo ${activeModel}...`);
+            updateProgress(`Antítesis (OpenClaw): Enrutando inferencia mediante el daemon local OpenClaw usando modelo ${activeModel}...`);
             
-            let url = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent`;
-            let headers = { 'Content-Type': 'application/json' };
-
-            // Usar Auth-Bridge si está configurado, o usar API Key
-            if (process.env.USE_GEMINI_CLI_OAUTH !== 'false') {
-                const creds = await getGeminiOAuthToken();
-                headers['Authorization'] = `Bearer ${creds.access_token}`;
-            } else if (process.env.GEMINI_API_KEY) {
-                url += `?key=${process.env.GEMINI_API_KEY}`;
-            } else {
-                throw new Error("No hay método de autenticación válido para Gemini (OAuth desactivado y sin API Key).");
-            }
-
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: headers,
-                body: JSON.stringify({
-                    contents: [{
-                        role: "user",
-                        parts: [{ text: `Eres la conciencia del Agente BABYLON.IA.\nContexto (Memoria de disco):\n${contextText}\n\nDirectiva del Usuario:\n${prompt}` }]
-                    }]
-                })
+            // Reemplazo del fetch directo por la llamada al agente inter-proceso de OpenClaw
+            // Esto utiliza de forma nativa los scopes OAuth y tokens que ya tiene validados OpenClaw
+            const escapedPrompt = `${contextText}\n\nDirectiva del Usuario:\n${prompt}`.replace(/"/g, '\\"');
+            
+            const { stdout, stderr } = await execPromise(`openclaw agent --agent main --message "${escapedPrompt}" --json`, {
+                maxBuffer: 1024 * 1024 * 5, // Aumentar el buffer para respuestas largas
             });
 
-            if (!response.ok) {
-                const errData = await response.text();
-                throw new Error(`Gemini API falló con status ${response.status}: ${errData}`);
+            // Encontrar el inicio del JSON en stdout (OpenClaw a veces imprime warnings en stderr o al inicio de stdout)
+            const jsonStartIndex = stdout.indexOf('{');
+            if (jsonStartIndex === -1) {
+                throw new Error("No se pudo analizar la respuesta JSON de OpenClaw: " + stdout);
             }
+            
+            const jsonOutput = stdout.substring(jsonStartIndex);
+            const data = JSON.parse(jsonOutput);
 
-            const data = await response.json();
-            if (data.candidates && data.candidates.length > 0) {
-                llmResponseText = data.candidates[0].content.parts[0].text;
+            if (data.payloads && data.payloads.length > 0 && data.payloads[0].text) {
+                llmResponseText = data.payloads[0].text;
             } else {
-                throw new Error("Respuesta vacía de la API de Gemini.");
+                throw new Error("Respuesta vacía o formato desconocido del agente OpenClaw.");
             }
         }
     } catch (error) {
