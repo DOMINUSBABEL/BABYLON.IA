@@ -1,5 +1,5 @@
 {
-  "name": "babylon.ia",
+  "name": "babylonia",
   "version": "1.0.0",
   "description": "Agente Autónomo Multi-Canal (WhatsApp + Gemini OAuth) con Arquitectura Geist",
   "main": "index.js",
