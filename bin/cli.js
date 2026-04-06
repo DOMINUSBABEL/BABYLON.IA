@@ -69,16 +69,32 @@ async function showBanner() {
         "|_______||____/++++++++++++++++++++++++++++++++++++++++++++++++++++++\\_____||_______|"
     ];
 
-    // Gradiente dinámico de Azul a Oro
     const babylonGradient = gradient(['#0000aa', '#0000ff', '#ffd700']);
 
     for (let line of city) {
         console.log(babylonGradient(line));
-        await sleep(30); // Delay para la animación
+        await sleep(35); // Delay para la animación
     }
 
-    console.log(chalk.hex('#ffd700').bold('\n               ::: ARCHITECTURE GEIST // OMNI-CHANNEL :::\n'));
-    await sleep(300);
+    const archText = '               ::: ARCHITECTURE GEIST // OMNI-CHANNEL :::\n';
+    let typingEffect = '';
+    for (let i = 0; i < archText.length; i++) {
+        typingEffect += archText[i];
+        process.stdout.write('\r' + chalk.hex('#ffd700').bold(typingEffect));
+        await sleep(15);
+    }
+    console.log('\n');
+    
+    // Simular inicialización de módulos neuronales
+    const modules = ['Núcleo Base', 'Motor de Memoria', 'Dialéctica Hegelian', 'Puente OAuth', 'Enlace Multi-Canal'];
+    for (const mod of modules) {
+        process.stdout.write(chalk.gray(`[+] Cargando módulo ${mod}... `));
+        await sleep(200);
+        console.log(chalk.green('OK'));
+    }
+    
+    console.log(chalk.hex('#00ffff').bold('\n[+] Sincronización Geist Completada. Iniciando secuencia...\n'));
+    await sleep(400);
 }
 
 program
