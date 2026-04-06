@@ -2,12 +2,14 @@ import chalk from 'chalk';
 import fs from 'fs';
 import path from 'path';
 import { WikiMemory } from './wiki_memory.js';
+import { TEIParser } from './tei_parser.js';
 import { exec } from 'child_process';
 import util from 'util';
 
 const execPromise = util.promisify(exec);
 
 let wikiMemoryInstance = null;
+let teiParserInstance = null;
 
 function getWikiMemory() {
     if (!wikiMemoryInstance) {
@@ -23,11 +25,31 @@ function getWikiMemory() {
  */
 export async function processTask(prompt, updateProgress) {
     const memory = getWikiMemory();
+    if (!teiParserInstance) teiParserInstance = new TEIParser();
 
     // Fase 1: TESIS (Asimilación)
     const promptPreview = prompt.length > 30 ? prompt.substring(0, 30) + '...' : prompt;
     updateProgress(`Tesis (Iniciando): Analizando directiva [${promptPreview}] y cargando Memoria Wiki de disco (Zero-RAM impact)...`);
-    const contextText = memory.buildContext();
+    let contextText = memory.buildContext();
+
+    // Inyección dinámica si el usuario menciona análisis XML-TEI o archivos XML
+    const xmlRegex = /([a-zA-Z0-9_\-\\]+\.xml)/i;
+    const xmlMatch = prompt.match(xmlRegex);
+
+    if (xmlMatch) {
+        const potentialXmlPath = xmlMatch[1];
+        // En un entorno real validaríamos si el path es absoluto o relativo al workspace
+        const resolvedPath = path.resolve(process.cwd(), potentialXmlPath);
+        if (fs.existsSync(resolvedPath)) {
+            updateProgress(`Antítesis (Humanidades Digitales): Detectado corpus XML-TEI. Parseando documento y extrayendo metadatos/entidades...`);
+            const teiReport = teiParserInstance.generateAnalysisReport(resolvedPath);
+            contextText += `\n\n--- REPORTE XML-TEI EXTRAÍDO AUTOMÁTICAMENTE ---\n${teiReport}\n------------------------------------------------\n`;
+        } else {
+             updateProgress(`Antítesis (Humanidades Digitales): Se mencionó el archivo ${potentialXmlPath} pero no se encontró en disco. Se procederá con análisis teórico.`);
+        }
+    } else if (prompt.toLowerCase().includes('tei') || prompt.toLowerCase().includes('tesauro') || prompt.toLowerCase().includes('intertextual')) {
+         updateProgress(`Antítesis (Humanidades Digitales): Activando heurísticas de codificación XML-TEI y análisis de redes (Metodología A. Echavarría)...`);
+    }
     
     // Fase 2: ANTÍTESIS (Ejecución y Resolución de Conflictos)
     updateProgress("Antítesis (Estructuración): Integrando contexto del Tesauro Conceptual y resolviendo dependencias de la consulta...");
