@@ -208,6 +208,50 @@ export function initWhatsAppClient(agentEvents = null) {
                 return;
             }
 
+            
+            // COMANDO: JULES (DelegaciÃ³n a Jules CLI)
+            if (commandStr.toLowerCase().startsWith('jules ')) {
+                const julesPrompt = commandStr.substring(6).trim();
+                console.log(chalk.blue(`  -> Solicitud de delegaciÃ³n a Jules: ${julesPrompt}`));
+                let statusMsg = await msg.reply('â³ *Iniciando Agente Jules...*\n_Delegando tarea de despliegue/auto-mejora al cluster remoto..._');
+                
+                try {
+                    const { createJulesSession } = await import('./jules_bridge.js');
+                    const output = await createJulesSession(julesPrompt);
+                    await statusMsg.reply(`ðŸŸ¢ *Jules Task Iniciada:*\n\`\`\`\n${output.substring(0, 500)}\n\`\`\`\n_Usa '!geist jules-pull <id>' cuando finalice para aplicar cambios._`);
+                } catch (err) {
+                    await statusMsg.reply(`âŒ *Error en Jules:*\n_${err.message}_`);
+                }
+                return;
+            }
+
+            // COMANDO: JULES-PULL
+            if (commandStr.toLowerCase().startsWith('jules-pull ')) {
+                const sessionId = commandStr.substring(11).trim();
+                let statusMsg = await msg.reply(`â³ *Descargando SÃ­ntesis de Jules [${sessionId}]...*`);
+                try {
+                    const { pullJulesSession } = await import('./jules_bridge.js');
+                    const output = await pullJulesSession(sessionId);
+                    await statusMsg.reply(`âœ… *SÃ­ntesis Aplicada:*\n\`\`\`\n${output.substring(0, 800)}\n\`\`\``);
+                } catch (err) {
+                    await statusMsg.reply(`âŒ *Error en Jules Pull:*\n_${err.message}_`);
+                }
+                return;
+            }
+
+            // COMANDO: JULES-LIST
+            if (commandStr.toLowerCase() === 'jules-list') {
+                let statusMsg = await msg.reply(`â³ *Consultando sesiones de Jules...*`);
+                try {
+                    const { listJulesSessions } = await import('./jules_bridge.js');
+                    const output = await listJulesSessions();
+                    await statusMsg.reply(`ðŸ“‹ *Sesiones Activas:*\n\`\`\`\n${output.substring(0, 800)}\n\`\`\``);
+                } catch (err) {
+                    await statusMsg.reply(`âŒ *Error en Jules List:*\n_${err.message}_`);
+                }
+                return;
+            }
+
             // Si es un comando con !geist pero no es status ni enviar, igual lo mandamos al bucle
             console.log(chalk.blue('  -> Iniciando Bucle Dialéctico Forzado (System Directive)...'));
             let statusMsg = await msg.reply('⏳ *Iniciando Bucle Dialéctico Forzado...*');

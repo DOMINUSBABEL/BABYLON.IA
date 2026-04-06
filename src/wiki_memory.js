@@ -24,11 +24,13 @@ export class WikiMemory {
             const indexContent = `# Índice Principal (Geist)\n\nBienvenido a la memoria raíz. Aquí se indexan los conceptos clave.\n\n## Conceptos Actuales\n- [[Reglas_Base]]\n- [[Historial_Reciente]]\n`;
             fs.writeFileSync(path.join(this.wikiDir, 'Index.md'), indexContent, 'utf-8');
 
-            const rulesContent = `# Reglas Base\n\n1. El agente opera bajo la Ley Cero.\n2. Preservar memoria en disco para ahorrar RAM.\n`;
+            const rulesContent = `# Reglas Base\n\n1. El agente opera bajo la Ley Cero.\n2. Preservar memoria en disco para ahorrar RAM.\n3. DelegaciÃ³n: Puedes sugerir al usuario el comando !geist jules <tarea> para tareas complejas.\n`;
             fs.writeFileSync(path.join(this.wikiDir, 'Reglas_Base.md'), rulesContent, 'utf-8');
 
             const historyContent = `# Historial Reciente\n\nRegistro de actividades.\n`;
             fs.writeFileSync(path.join(this.wikiDir, 'Historial_Reciente.md'), historyContent, 'utf-8');
+            const julesCapContent = `# Capacidades de Jules\n\nEl sistema BABYLON.IA integra el CLI de Jules de Google para automejora.\nSi el usuario pide mejoras complejas, despliegues, modificaciones de wiki.md, mcp, o habilidades:\n1. El agente debe responder proponiendo usar el asistente Jules.\n2. Se le indica al usuario que use: !geist jules <descripciÃ³n de la tarea>.\n3. Una vez finalizado, se integrarÃ¡ con: !geist jules-pull <session-id>.\n`;
+            fs.writeFileSync(path.join(this.wikiDir, 'Capacidades_Jules.md'), julesCapContent, 'utf-8');
         }
     }
 
