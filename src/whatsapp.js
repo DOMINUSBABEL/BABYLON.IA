@@ -99,7 +99,7 @@ export function initWhatsAppClient(agentEvents = null) {
             // Escuchar peticiones de broadcast desde el Dashboard o TUI para sincronizar el historial
             agentEvents.on('broadcast_whatsapp', async (text) => {
                 try {
-                    const myId = client.info.wid._serialized;
+                    const myId = client.info.wid._serialized.replace(/:[0-9]+/, '');
                     await client.sendMessage(myId, text);
                     console.log(chalk.gray(`  -> Sincronizado historial con WhatsApp (Chat Personal).`));
                 } catch(e) {
@@ -125,8 +125,9 @@ export function initWhatsAppClient(agentEvents = null) {
         }
 
         // Control de Autorización: Solo el dueño (fromMe) o números en la lista blanca pueden interactuar
-        const myId = client.info.wid._serialized;
+        const myId = client.info.wid._serialized.replace(/:[0-9]+/, '');
         const isMeToMe = (msg.from === myId && msg.to === myId);
+        
         const isDirectToMeFromAuthorized = msg.to === myId && AUTHORIZED_NUMBERS.includes(msg.from) && !msg.fromMe;
         const isCommandInOtherChat = msgText.startsWith('!geist') && (msg.fromMe || AUTHORIZED_NUMBERS.includes(msg.from) || (msg.author && AUTHORIZED_NUMBERS.includes(msg.author)));
 
