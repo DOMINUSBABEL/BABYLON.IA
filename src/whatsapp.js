@@ -113,21 +113,23 @@ export function initWhatsAppClient(agentEvents = null) {
         // Ignoramos mensajes vacíos a menos que tengan archivos adjuntos
         if (!msg.body && !msg.hasMedia) return;
 
-        // PREVENCIÓN DE BUCLE DE PENSAMIENTO (Thought Loop / Token Drain Prevention):
+        // PREVENCIÃ“N DE BUCLE DE PENSAMIENTO (Thought Loop / Token Drain Prevention):
         // Ignoramos los mensajes que inician con las firmas visuales o texto del propio bot.
-        // Esto evita que el bot se responda a sí mismo infinitamente.
+        // Esto evita que el bot se responda a sÃ­ mismo infinitamente.
         const msgText = msg.body ? msg.body.trim() : '';
         const botSignatures = [
-            '🧠', '⏳', '🟢', '⚠️', '❌', '*BABYLON.IA', '*Geist', 'He procesado', 'Procesando...', '*[Directiva'
+            'ðŸ§ ', 'â³', 'ðŸŸ¢', 'âš ï¸', 'âŒ', '*BABYLON.IA', '*Geist', 'He procesado', 'Procesando...', '*[Directiva'
         ];
         if (botSignatures.some(sig => msgText.startsWith(sig)) || msgText.includes('Estado del Sistema (Geist)')) {
             return;
         }
 
-        // Control de Autorización: Solo el dueño (fromMe) o números en la lista blanca pueden interactuar
-        const isAuthorized = msg.fromMe || AUTHORIZED_NUMBERS.includes(msg.from);
+        // Control de AutorizaciÃ³n: Solo el dueÃ±o (fromMe) o nÃºmeros en la lista blanca pueden interactuar
+        // o vÃ­a una herramienta de canales que autorice nÃºmeros distintos.
+        // Emular la soluciÃ³n si este error existe en los demÃ¡s canales.
+        const isAuthorizedChannel = msg.fromMe || AUTHORIZED_NUMBERS.includes(msg.from) || (msg.author && AUTHORIZED_NUMBERS.includes(msg.author));
 
-        if (!isAuthorized) return;
+        if (!isAuthorizedChannel) return;
 
         let finalPrompt = msgText;
 
@@ -140,7 +142,7 @@ export function initWhatsAppClient(agentEvents = null) {
                     if (!fs.existsSync(mediaDir)) {
                         fs.mkdirSync(mediaDir, { recursive: true });
                     }
-                    
+
                     let fileName = media.filename;
                     if (!fileName) {
                         let ext = '';
@@ -156,19 +158,19 @@ export function initWhatsAppClient(agentEvents = null) {
                         }
                         fileName = `media_${Date.now()}${ext.replace(/[^a-zA-Z0-9.]/g, '')}`;
                     }
-                    
+
                     const filePath = path.join(mediaDir, fileName);
                     fs.writeFileSync(filePath, media.data, 'base64');
-                    
+
                     console.log(chalk.yellow(`\n[!] Archivo adjunto descargado y guardado en: ${filePath}`));
-                    finalPrompt = `[ATENCIÓN: El usuario ha enviado un archivo multimedia/documento. El archivo fue descargado exitosamente y se encuentra en esta ruta local exacta: ${filePath} . DEBES usar obligatoriamente tu herramienta de lectura de archivos ('read_file') para abrir, leer y analizar el contenido de este archivo antes de dar una respuesta.]\n\nDirectiva del usuario: ${finalPrompt || 'Analiza el archivo adjunto.'}`;
+                    finalPrompt = `[ATENCIÃ“N: El usuario ha enviado un archivo multimedia/documento. El archivo fue descargado exitosamente y se encuentra en esta ruta local exacta: ${filePath} . DEBES usar obligatoriamente tu herramienta de lectura de archivos ('read_file') para abrir, leer y analizar el contenido de este archivo antes de dar una respuesta.]\n\nDirectiva del usuario: ${finalPrompt || 'Analiza el archivo adjunto.'}`;
                 }
             } catch (err) {
                 console.error(chalk.red(`Error al procesar el archivo adjunto: ${err.message}`));
             }
         }
 
-        // Si el mensaje empieza con !geist, se asume que es un comando de configuración/sistema
+        // Si el mensaje empieza con !geist, se asume que es un comando de configuraciÃ³n/sistema
         if (msgText.startsWith('!geist')) {
             console.log(chalk.magenta(`\n[+] Comando Recibido [${msg.from}]: ${msgText}`));
             const commandStr = msgText.replace('!geist', '').trim();
