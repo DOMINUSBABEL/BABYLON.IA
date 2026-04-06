@@ -76,7 +76,7 @@ export async function processTask(prompt, updateProgress) {
             const geminiBin = process.platform === 'win32' ? 'gemini.cmd' : 'gemini';
             
             // Pasamos el comando como un solo string para evitar el DeprecationWarning de Node al usar shell: true con arrays
-            const geminiProcess = spawn(geminiBin, ['-m', activeModel, '-p', ' ', '-o', 'json'], {
+            const geminiProcess = spawn(geminiBin, ['-m', activeModel, '-p', '.', '-o', 'json'], {
                 shell: process.platform === 'win32'
             });
 
