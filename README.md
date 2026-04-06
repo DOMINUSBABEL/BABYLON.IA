@@ -100,11 +100,11 @@ The system is designed for deployment on any Node.js environment, including low-
 - Optional: Ollama installed for local Open-Source Models (Gemma, Qwen).
 - Git for cloning the repository.
 
-### 5.2 Installation Steps
+### 5.2 Installation Steps & Macro Interoperability
 
-**Automatic Universal Installation (1-Command):**
+**Automatic Universal Installation (1-Command Quickstart):**
 
-BABYLON.IA is optimized for seamless cross-platform deployment. You do not need to clone the repository manually; simply run the corresponding command for your terminal to download and install everything globally.
+BABYLON.IA is optimized for seamless cross-platform deployment. Our installer dynamically detects your Operating System (`OS_TARGET`) and customizes the dependency management and model configuration entirely out of the box.
 
 *   **Linux / macOS / Android (Termux) / iOS (iSH):**
     ```bash
@@ -117,18 +117,46 @@ BABYLON.IA is optimized for seamless cross-platform deployment. You do not need 
     Invoke-WebRequest -Uri "https://raw.githubusercontent.com/DOMINUSBABEL/BABYLON.IA/master/install.ps1" -OutFile "install.ps1"; .\install.ps1
     ```
 
-**2. Run the Onboarding Configuration:**
-This interactive menu sets up the agent, selects the AI model (including OS-specific local models and the primary Gemini Auth-Bridge), links platforms, creates the Sandbox workspace, and configures the deployment environment.
+#### 📱 Android (Termux) Integration
+
+For users deploying the system on mobile Android terminals (Termux), the architecture relies on extreme low-memory profiling and dynamic Chromium routing to function.
+
+**Automated Setup:**
+The `install.sh` script automatically provisions Termux environments by adding necessary repositories (`x11-repo`, `tur-repo`) and safely handling `nodejs` and `chromium` installations.
+
+**Complex / Manual Setup (For Advanced Control):**
+If you encounter `npm: command not found` or `Unable to locate package chromium` errors due to repository mirrors out-of-sync, manually execute the following block:
+```bash
+# 1. Update and install required repositories
+pkg update -y && pkg upgrade -y
+pkg install -y x11-repo tur-repo
+
+# 2. Install base dependencies
+pkg install -y nodejs git chromium
+
+# 3. Clone and install the agent
+git clone https://github.com/DOMINUSBABEL/BABYLON.IA.git
+cd BABYLON.IA
+export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+export PUPPETEER_EXECUTABLE_PATH="/data/data/com.termux/files/usr/bin/chromium-browser"
+npm install
+npm link
+```
+
+### 5.3 System Boot & Configuration
+
+**1. Run the Onboarding Configuration:**
+This interactive menu sets up the agent, selects the AI model (including OS-specific local models like quantized versions for Android or Apple MLX, or the primary Gemini Auth-Bridge), links platforms, creates the Sandbox workspace, and configures the deployment environment.
 ```bash
 babylonia onboard
 ```
 
-**4. Start the BABYLON.IA Gateway:**
+**2. Start the BABYLON.IA Gateway:**
 ```bash
 babylonia gateway
 ```
 
-**5. Open the Web Dashboard:**
+**3. Open the Web Dashboard:**
 ```bash
 babylonia dashboard
 ```
