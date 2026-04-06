@@ -126,10 +126,13 @@ export function initWhatsAppClient(agentEvents = null) {
 
         // Control de Autorización: Solo el dueño (fromMe) o números en la lista blanca pueden interactuar
         const myId = client.info.wid._serialized.replace(/:[0-9]+/, '');
-        const isMeToMe = (msg.from === myId && msg.to === myId);
-        
-        const isDirectToMeFromAuthorized = msg.to === myId && AUTHORIZED_NUMBERS.includes(msg.from) && !msg.fromMe;
-        const isCommandInOtherChat = msgText.startsWith('!geist') && (msg.fromMe || AUTHORIZED_NUMBERS.includes(msg.from) || (msg.author && AUTHORIZED_NUMBERS.includes(msg.author)));
+        const fromClean = msg.from ? msg.from.replace(/:[0-9]+/, '') : '';
+        const toClean = msg.to ? msg.to.replace(/:[0-9]+/, '') : '';
+        const authorClean = msg.author ? msg.author.replace(/:[0-9]+/, '') : '';
+
+        const isMeToMe = (fromClean === myId && toClean === myId);
+        const isDirectToMeFromAuthorized = toClean === myId && AUTHORIZED_NUMBERS.includes(fromClean) && !msg.fromMe;
+        const isCommandInOtherChat = msgText.startsWith('!geist') && (msg.fromMe || AUTHORIZED_NUMBERS.includes(fromClean) || (authorClean && AUTHORIZED_NUMBERS.includes(authorClean)));
 
         if (!isMeToMe && !isDirectToMeFromAuthorized && !isCommandInOtherChat) return;
 
