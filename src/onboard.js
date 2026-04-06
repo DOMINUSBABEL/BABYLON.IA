@@ -57,6 +57,10 @@ export async function runOnboard() {
       modelChoices.push({ name: 'ollama:qwen2.5 (Local Open Source - Rápido Windows/Linux)', value: 'ollama:qwen2.5' });
   }
 
+  // Agregar opciones de AI Edge para todos los entornos. Se asume que el usuario los corre mediante un backend compatible
+  modelChoices.push({ name: 'aiedge:gemma-4-e2b (Google AI Edge Gallery - Gemma 4 E2B)', value: 'aiedge:gemma-4-e2b' });
+  modelChoices.push({ name: 'aiedge:gemma-4-e4b (Google AI Edge Gallery - Gemma 4 E4B)', value: 'aiedge:gemma-4-e4b' });
+
   const model = await select({
     message: 'Selecciona el modelo cognitivo a utilizar:',
     choices: modelChoices
