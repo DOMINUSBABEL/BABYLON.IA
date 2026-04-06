@@ -71,10 +71,10 @@ export async function processTask(prompt, updateProgress) {
             const { spawn } = await import('child_process');
             
             const geminiBin = process.platform === 'win32' ? 'gemini.cmd' : 'gemini';
-            // Desactivamos shell:true para evitar DeprecationWarning y problemas de buffer en cmd.exe con UTF-8
-            const geminiProcess = spawn(geminiBin, ['-m', activeModel, '-p', ' ', '-o', 'json'], { 
-                shell: process.platform === 'win32', // Requerido en Windows para .cmd, pero pasamos args de forma segura
-                windowsVerbatimArguments: true
+            
+            // Pasamos el comando como un solo string para evitar el DeprecationWarning de Node al usar shell: true con arrays
+            const geminiProcess = spawn(`${geminiBin} -m ${activeModel} -p " " -o json`, { 
+                shell: true
             });
 
             let stdoutData = '';
