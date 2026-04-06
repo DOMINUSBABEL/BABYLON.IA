@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import chalk from 'chalk';
 import events from 'events';
+import readline from 'readline';
 
 // Submódulos del agente
 import { getGeminiOAuthToken } from './auth.js';
@@ -37,10 +38,20 @@ const originalError = console.error;
 // Creamos un event emitter global para comunicarnos con WhatsApp
 export const agentEvents = new events.EventEmitter();
 
+// TUI / Readline instanciación (definido luego, pero se necesita para el prompt padding)
+let rlInterface = null;
+
 console.log = function () {
+    if (rlInterface) {
+        process.stdout.write('\x1b[2K\x1b[0G'); // Clear current line and return to start
+    }
     const args = Array.from(arguments);
     const message = args.join(' ');
     originalLog.apply(console, args);
+
+    // Restaurar prompt de Readline después de que console.log printee algo
+    if (rlInterface) rlInterface.prompt(true);
+
     // Enviar el texto limpio (sin códigos ANSI de tiza)
     // Usamos una regex simple para limpiar los códigos de escape ANSI
     const cleanMsg = typeof message === 'string' ? message.replace(/\u001b\[.*?m/g, '') : JSON.stringify(message);
@@ -48,12 +59,61 @@ console.log = function () {
 };
 
 console.error = function () {
+    if (rlInterface) {
+        process.stdout.write('\x1b[2K\x1b[0G'); // Clear current line
+    }
     const args = Array.from(arguments);
     const message = args.join(' ');
     originalError.apply(console, args);
+
+    if (rlInterface) rlInterface.prompt(true);
+
     const cleanMsg = typeof message === 'string' ? message.replace(/\u001b\[.*?m/g, '') : JSON.stringify(message);
     io.emit('system_error', cleanMsg);
 };
+
+// Función para inicializar el TUI
+function initTerminalUI() {
+    rlInterface = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+        prompt: chalk.hex('#FFD700').bold('BABYLON.IA > ')
+    });
+
+    rlInterface.prompt();
+
+    rlInterface.on('line', async (line) => {
+        const input = line.trim();
+        if (!input) {
+            rlInterface.prompt();
+            return;
+        }
+
+        // TUI Comando directo
+        if (input.toLowerCase() === 'exit' || input.toLowerCase() === 'quit') {
+            console.log(chalk.red('Cerrando BABYLON.IA Gateway...'));
+            process.exit(0);
+        }
+
+        console.log(chalk.cyan(`\n[~] Tesis Natural Recibida (TUI Terminal): ${input}`));
+
+        try {
+            const response = await processTask(input, (progressText) => {
+                console.log(chalk.gray(`     [LLM/Geist] ${progressText}`));
+            });
+
+            console.log(chalk.green('  -> Síntesis natural generada (Terminal).'));
+            console.log(`\n*BABYLON.IA (TUI)*:\n${response}\n`);
+        } catch (error) {
+            console.error(chalk.red(`[Error Procesando Tarea]: ${error.message}`));
+        }
+
+        rlInterface.prompt();
+    }).on('close', () => {
+        console.log(chalk.red('\nSaliendo del Agente de Consola...'));
+        process.exit(0);
+    });
+}
 
 // Configuración de WebSockets
 io.on('connection', (socket) => {
@@ -133,6 +193,12 @@ server.listen(PORT, async () => {
             if (platforms.includes('web')) {
                 console.log(chalk.magentaBright('\n[!] Dashboard Web activado. Escuchando directivas locales...'));
             }
+
+            // Iniciar la TUI de la terminal independientemente de las plataformas de mensajería
+            setTimeout(() => {
+                console.log(chalk.magentaBright('\n[!] Consola TUI activada. Escribe tus directivas en lenguaje natural...'));
+                initTerminalUI();
+            }, 500); // Pequeño retraso para que los logs de arranque terminen
             
         } catch (error) {
             spinner.fail(chalk.red('Error en el arranque de la conciencia.'));
