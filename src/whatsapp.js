@@ -122,10 +122,14 @@ export function initWhatsAppClient(agentEvents = null) {
             return;
         }
 
-        // Control de AutorizaciÃ³n: Solo el dueÃ±o (fromMe) o nÃºmeros en la lista blanca pueden interactuar
-        // o vÃ­a una herramienta de canales que autorice nÃºmeros distintos.
-        // Emular la soluciÃ³n si este error existe en los demÃ¡s canales.
-        const isAuthorizedChannel = msg.fromMe || AUTHORIZED_NUMBERS.includes(msg.from) || (msg.author && AUTHORIZED_NUMBERS.includes(msg.author));
+        // Control de AutorizaciÃ³n: Solo el dueÃ±o en su propio chat (fromMe a sÃ­ mismo) 
+        // o nÃºmeros en la lista blanca pueden interactuar.
+        // Esto previene que el bot responda a mensajes que el dueÃ±o envÃ­a a otras personas.
+        const myId = client.info.wid._serialized;
+        const isFromMeToMe = msg.fromMe && msg.to === myId;
+        const isFromAuthorized = !msg.fromMe && (AUTHORIZED_NUMBERS.includes(msg.from) || (msg.author && AUTHORIZED_NUMBERS.includes(msg.author)));
+        
+        const isAuthorizedChannel = isFromMeToMe || isFromAuthorized;
 
         if (!isAuthorizedChannel) return;
 
