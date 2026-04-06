@@ -25,11 +25,12 @@ export async function processTask(prompt, updateProgress) {
     const memory = getWikiMemory();
 
     // Fase 1: TESIS (Asimilación)
-    updateProgress("Tesis (Iniciando): Analizando directiva y cargando Memoria Wiki de disco (Zero-RAM impact)...");
+    const promptPreview = prompt.length > 30 ? prompt.substring(0, 30) + '...' : prompt;
+    updateProgress(`Tesis (Iniciando): Analizando directiva [${promptPreview}] y cargando Memoria Wiki de disco (Zero-RAM impact)...`);
     const contextText = memory.buildContext();
     
     // Fase 2: ANTÍTESIS (Ejecución y Resolución de Conflictos)
-    updateProgress("Antítesis (Ejecución): Integrando contexto del Tesauro Conceptual y resolviendo aporías locales...");
+    updateProgress("Antítesis (Estructuración): Integrando contexto del Tesauro Conceptual y resolviendo dependencias de la consulta...");
     
     const babiloniaPath = "C:\\Users\\jegom\\OneDrive\\Desktop\\Investigaciones\\geist\\Sintesis_Babilonia_China";
     let knowledgeStatus = "Wiki Memory Activa";
@@ -43,6 +44,7 @@ export async function processTask(prompt, updateProgress) {
 
     const activeModel = process.env.GEMINI_MODEL || 'gemini-3.1-pro-preview';
     let llmResponseText = "";
+    let statsStr = "";
 
     try {
         if (activeModel.startsWith('ollama:')) {
@@ -64,7 +66,7 @@ export async function processTask(prompt, updateProgress) {
             llmResponseText = data.response;
 
         } else {
-            updateProgress(`Antítesis (Gemini CLI): Enrutando inferencia mediante el CLI companion de Gemini usando modelo ${activeModel}...`);
+            updateProgress(`Antítesis (Gemini CLI): Desplegando agentes cognitivos y ejecutando inferencia sobre el modelo ${activeModel}...`);
             
             // Usamos spawn para inyectar el contexto por la entrada estándar (stdin) y evitar el límite de longitud en terminales
             // Esto utiliza de forma nativa los scopes OAuth y tokens que ya tiene validados el CLI de Gemini
@@ -85,6 +87,10 @@ export async function processTask(prompt, updateProgress) {
 
             geminiProcess.stdout.on('data', (data) => {
                 stdoutData += data;
+                // Intentar dar feedback en tiempo real si vemos progreso en herramientas
+                if (data.includes('call:')) {
+                    updateProgress(`Subagente (Herramienta): Ejecutando operaciones de sistema...`);
+                }
             });
 
             geminiProcess.stderr.on('data', (data) => {
@@ -119,6 +125,21 @@ export async function processTask(prompt, updateProgress) {
 
             if (data.response) {
                 llmResponseText = data.response;
+                
+                // Extraer estadísticas para detallar el razonamiento
+                if (data.stats && data.stats.models && data.stats.models[activeModel]) {
+                    const mStats = data.stats.models[activeModel].tokens;
+                    const latency = data.stats.models[activeModel].api ? data.stats.models[activeModel].api.totalLatencyMs : 0;
+                    const toolCalls = data.stats.tools ? data.stats.tools.totalCalls : 0;
+                    
+                    statsStr = `\n- Tokens procesados: ${mStats.total || 0} (${latency}ms)`;
+                    if (toolCalls > 0) {
+                        statsStr += `\n- Subagentes/Tools ejecutados: ${toolCalls}`;
+                        updateProgress(`Antítesis (Validación): Subagentes completaron ${toolCalls} tareas satélite. Validando síntesis...`);
+                    } else {
+                        updateProgress(`Antítesis (Validación): Estructuración cognitiva completada en ${latency}ms.`);
+                    }
+                }
             } else {
                 throw new Error("Respuesta vacía o formato desconocido del agente Gemini CLI.");
             }
@@ -129,12 +150,12 @@ export async function processTask(prompt, updateProgress) {
     }
 
     // Fase 3: SÍNTESIS (Resultado)
-    updateProgress("Síntesis (Conclusión): Empaquetando resultado y ejecutando Heartbeat de Memoria en disco.");
+    updateProgress("Síntesis (Conclusión): Empaquetando resultado final, indexando aprendizajes y ejecutando Heartbeat de Memoria en disco.");
     
     const result = `${llmResponseText}\n\n` +
                    `*🧠 Estado del Sistema (Geist):*\n` +
                    `- Motor Gemini CLI: Activo y Enlazado\n` +
-                   `- Modelo Activo: ${activeModel}\n` +
+                   `- Modelo Activo: ${activeModel}${statsStr}\n` +
                    `- Entorno: ${process.env.OS_TARGET || 'desktop_windows'}\n`;
 
     memory.heartbeat(prompt, result);
