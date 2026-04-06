@@ -64,29 +64,55 @@ export async function processTask(prompt, updateProgress) {
             llmResponseText = data.response;
 
         } else {
-            updateProgress(`Antítesis (OpenClaw): Enrutando inferencia mediante el daemon local OpenClaw usando modelo ${activeModel}...`);
+            updateProgress(`Antítesis (Gemini CLI): Enrutando inferencia mediante el CLI companion de Gemini usando modelo ${activeModel}...`);
             
-            // Reemplazo del fetch directo por la llamada al agente inter-proceso de OpenClaw
-            // Esto utiliza de forma nativa los scopes OAuth y tokens que ya tiene validados OpenClaw
-            const escapedPrompt = `${contextText}\n\nDirectiva del Usuario:\n${prompt}`.replace(/"/g, '\\"');
+            // Usamos spawn para inyectar el contexto por la entrada estándar (stdin) y evitar el límite de longitud en terminales
+            // Esto utiliza de forma nativa los scopes OAuth y tokens que ya tiene validados el CLI de Gemini
+            const { spawn } = await import('child_process');
             
-            const { stdout, stderr } = await execPromise(`openclaw agent --agent main --message "${escapedPrompt}" --json`, {
-                maxBuffer: 1024 * 1024 * 5, // Aumentar el buffer para respuestas largas
+            const geminiBin = process.platform === 'win32' ? 'gemini.cmd' : 'gemini';
+            const geminiProcess = spawn(geminiBin, ['-m', activeModel, '-p', '" "', '-o', 'json'], { shell: true });
+
+            let stdoutData = '';
+            let stderrData = '';
+
+            geminiProcess.stdout.on('data', (data) => {
+                stdoutData += data.toString();
             });
 
-            // Encontrar el inicio del JSON en stdout (OpenClaw a veces imprime warnings en stderr o al inicio de stdout)
-            const jsonStartIndex = stdout.indexOf('{');
+            geminiProcess.stderr.on('data', (data) => {
+                stderrData += data.toString();
+            });
+
+            const fullPrompt = `${contextText}\n\nDirectiva del Usuario:\n${prompt}`;
+            
+            // Escribir el contexto en la entrada estándar y cerrarla
+            geminiProcess.stdin.write(fullPrompt);
+            geminiProcess.stdin.end();
+
+            await new Promise((resolve, reject) => {
+                geminiProcess.on('close', (code) => {
+                    if (code !== 0) {
+                        reject(new Error(`Gemini CLI falló con código ${code}: ${stderrData}`));
+                    } else {
+                        resolve();
+                    }
+                });
+                geminiProcess.on('error', reject);
+            });
+
+            const jsonStartIndex = stdoutData.indexOf('{');
             if (jsonStartIndex === -1) {
-                throw new Error("No se pudo analizar la respuesta JSON de OpenClaw: " + stdout);
+                throw new Error("No se pudo analizar la respuesta JSON de Gemini CLI: " + stdoutData);
             }
             
-            const jsonOutput = stdout.substring(jsonStartIndex);
+            const jsonOutput = stdoutData.substring(jsonStartIndex);
             const data = JSON.parse(jsonOutput);
 
-            if (data.payloads && data.payloads.length > 0 && data.payloads[0].text) {
-                llmResponseText = data.payloads[0].text;
+            if (data.response) {
+                llmResponseText = data.response;
             } else {
-                throw new Error("Respuesta vacía o formato desconocido del agente OpenClaw.");
+                throw new Error("Respuesta vacía o formato desconocido del agente Gemini CLI.");
             }
         }
     } catch (error) {
@@ -99,7 +125,7 @@ export async function processTask(prompt, updateProgress) {
     
     const result = `${llmResponseText}\n\n` +
                    `*🧠 Estado del Sistema (Geist):*\n` +
-                   `- Motor OpenClaw: Activo y Enlazado\n` +
+                   `- Motor Gemini CLI: Activo y Enlazado\n` +
                    `- Modelo Activo: ${activeModel}\n` +
                    `- Entorno: ${process.env.OS_TARGET || 'desktop_windows'}\n`;
 
