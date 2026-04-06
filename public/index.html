@@ -83,35 +83,33 @@
         <div class="lg:col-span-2 flex flex-col gap-6">
             
             <!-- Reasoning Panel -->
-            <div class="bg-black border border-blue-500/30 rounded-lg shadow-[0_0_15px_rgba(0,0,255,0.1)] flex flex-col overflow-hidden h-[300px]">
-                <div class="bg-gray-900 border-b border-blue-500/30 p-3 flex justify-between items-center">
-                    <h2 class="text-sm font-bold text-yellow-500">
-                        <i class="fa-solid fa-brain text-blue-500 mr-2"></i> Flujo de Razonamiento Geist
+            <div class="glass-panel border-blue-500/50 rounded-lg shadow-[0_0_20px_rgba(59,130,246,0.2)] flex flex-col overflow-hidden h-[350px]">
+                <div class="bg-gray-900 border-b border-blue-500/50 p-3 flex justify-between items-center">
+                    <h2 class="text-sm font-bold text-blue-400 glow-blue">
+                        <i class="fa-solid fa-brain mr-2 animate-pulse"></i> Flujo de Razonamiento Geist
                     </h2>
-                    <div id="reasoning-status" class="text-xs text-gray-400">
-                        <i class="fa-solid fa-circle text-gray-600 text-[10px] mr-1"></i> Inactivo
+                    <div id="reasoning-status" class="text-xs font-bold text-blue-500 bg-blue-900/30 px-2 py-1 rounded border border-blue-500/30">
+                        <i class="fa-solid fa-circle text-[10px] mr-1"></i> STANDBY
                     </div>
                 </div>
-                <div id="reasoning-output" class="flex-grow p-4 overflow-y-auto bg-[#050510] text-sm leading-relaxed font-mono whitespace-pre-wrap break-words">
-                    <!-- Reasoning steps will appear here as queue orders -->
-                    <div class="text-blue-900/50 mb-2 italic">Esperando tareas y directivas...</div>
+                <div id="reasoning-output" class="flex-grow p-5 overflow-y-auto bg-[#03030b] text-sm leading-relaxed font-mono whitespace-pre-wrap break-words space-y-3">
+                    <div class="text-blue-900/50 italic flex items-center gap-2"><i class="fa-solid fa-satellite-dish"></i> Esperando inyección de tesis...</div>
                 </div>
             </div>
 
             <!-- Terminal Output -->
-            <div class="bg-black border border-green-500/20 rounded-lg shadow-lg flex flex-col overflow-hidden flex-grow h-[350px]">
-                <div class="bg-gray-900 border-b border-green-500/20 p-3 flex justify-between items-center">
-                    <h2 class="text-sm font-semibold text-gray-300">
-                        <i class="fa-solid fa-server text-green-500 mr-2"></i> Registro del Sistema
+            <div class="glass-panel border-green-500/30 rounded-lg shadow-[0_0_15px_rgba(34,197,94,0.1)] flex flex-col overflow-hidden flex-grow h-[300px]">
+                <div class="bg-gray-900 border-b border-green-500/30 p-3 flex justify-between items-center">
+                    <h2 class="text-sm font-semibold text-green-400 glow-text">
+                        <i class="fa-solid fa-server mr-2"></i> Telemetría del Sistema
                     </h2>
-                    <button id="clear-btn" class="text-xs text-gray-500 hover:text-green-400 transition-colors" title="Limpiar Consola">
-                        <i class="fa-solid fa-eraser"></i> Limpiar
+                    <button id="clear-btn" class="text-xs text-gray-400 hover:text-green-400 border border-transparent hover:border-green-500/50 bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded transition-all" title="Limpiar Consola">
+                        <i class="fa-solid fa-eraser"></i> Purgar Logs
                     </button>
                 </div>
 
-                <div id="terminal-output" class="flex-grow p-4 overflow-y-auto bg-[#0a0a0a] text-sm leading-relaxed font-mono whitespace-pre-wrap break-words">
-                    <!-- Terminal logs will appear here -->
-                    <div class="text-gray-500 mb-2">Bucle dialéctico inicializado. Esperando flujos de datos...</div>
+                <div id="terminal-output" class="flex-grow p-4 overflow-y-auto bg-[#050a05] text-xs leading-relaxed font-mono whitespace-pre-wrap break-words">
+                    <div class="text-gray-500 flex items-center gap-2 mb-2"><i class="fa-solid fa-terminal"></i> Daemon TUI inicializado.</div>
                 </div>
             </div>
 
