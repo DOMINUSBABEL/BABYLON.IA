@@ -88,14 +88,14 @@ export async function runOnboard() {
               const modelsDir = path.join(rootDir, 'workspace', 'models');
               if (!fs.existsSync(modelsDir)) fs.mkdirSync(modelsDir, { recursive: true });
               
-              const is2B = model.includes('2b');
-              const modelName = is2B ? 'gemma-2-2b-it-Q4_K_M.gguf' : 'qwen2.5-3b-instruct-q4_k_m.gguf';
+              const is2B = model.includes('e2b');
+              const modelName = is2B ? 'gemma-2-2b-it-Q4_K_M.gguf' : 'gemma-2-9b-it-Q4_K_M.gguf';
               const destPath = path.join(modelsDir, modelName);
               
-              // URLs públicas de HuggingFace optimizadas (GGUF cuantizados para correr en CPU/móvil)
+              // URLs públicas de HuggingFace optimizadas (GGUF cuantizados en 4-bit para correr en CPU/móvil)
               const downloadUrl = is2B 
                   ? "https://huggingface.co/bartowski/gemma-2-2b-it-GGUF/resolve/main/gemma-2-2b-it-Q4_K_M.gguf"
-                  : "https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf";
+                  : "https://huggingface.co/bartowski/gemma-2-9b-it-GGUF/resolve/main/gemma-2-9b-it-Q4_K_M.gguf";
                   
               console.log(chalk.yellow(`\n[!] Iniciando descarga directa del binario cuantizado Edge (${modelName}) a ${modelsDir}...`));
               console.log(chalk.gray(`Descargando desde: ${downloadUrl}\n(Esto puede tardar varios minutos dependiendo de tu conexión)`));
@@ -108,6 +108,9 @@ export async function runOnboard() {
                       execSync(`curl -L -C - -o "${destPath}" "${downloadUrl}"`, { stdio: 'inherit' });
                   }
                   console.log(chalk.green(`\n[✓] Binario Edge instalado exitosamente en: ${destPath}`));
+                  console.log(chalk.cyan(`\n[i] Para ejecutar este modelo en Termux (Android), se recomienda usar llama.cpp:`));
+                  console.log(chalk.gray(`    pkg install llama.cpp`));
+                  console.log(chalk.gray(`    llama-cli -m workspace/models/${modelName} -c 2048 -i\n`));
               } catch(e) {
                   console.error(chalk.red(`\n[X] Error en la descarga del modelo Edge: ${e.message}`));
                   console.log(chalk.yellow(`Puedes descargarlo manualmente desde un navegador y moverlo a la ruta: ${destPath}`));
