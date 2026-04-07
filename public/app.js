@@ -27,10 +27,8 @@ const btnRefreshConfig = document.getElementById('btn-refresh-config');
 const configModel = document.getElementById('config-model');
 const configCustomModel = document.getElementById('config-custom-model');
 
-// Context Elements
-const contextEditor = document.getElementById('context-editor');
-const saveContextBtn = document.getElementById('save-context-btn');
-const contextLoading = document.getElementById('context-loading');
+const configHeartbeat = document.getElementById('config-heartbeat');
+const configCustomHeartbeat = document.getElementById('config-custom-heartbeat');
 
 // Theme Toggle
 const themeToggle = document.getElementById('theme-toggle');
@@ -64,9 +62,15 @@ tabBtns.forEach(btn => {
 
         // Load specific data when tab is opened
         if (targetId === 'tab-context') {
-            socket.emit('get_agents_md');
+            socket.emit('get_wiki_tree');
+            if (currentEditingFile === 'AGENTS.md') {
+                socket.emit('get_agents_md');
+            } else {
+                socket.emit('get_wiki_file', currentEditingFile);
+            }
         } else if (targetId === 'tab-config') {
             socket.emit('get_config');
+            socket.emit('check_local_models');
         }
     });
 });
@@ -80,6 +84,18 @@ configModel.addEventListener('change', (e) => {
         configCustomModel.disabled = true;
     }
 });
+
+// Select custom heartbeat logic
+if (configHeartbeat) {
+    configHeartbeat.addEventListener('change', (e) => {
+        if (e.target.value === 'custom') {
+            configCustomHeartbeat.disabled = false;
+            configCustomHeartbeat.focus();
+        } else {
+            configCustomHeartbeat.disabled = true;
+        }
+    });
+}
 
 // Utilidad para autoscroll
 function scrollToBottom(el) {
@@ -375,11 +391,108 @@ if (btnRefreshConfig) {
 }
 
 // Context Actions
+let currentEditingFile = 'AGENTS.md';
+const currentFileLabel = document.getElementById('current-file-label');
+const wikiTreeContainer = document.getElementById('wiki-tree-container');
+const newWikiBtn = document.getElementById('new-wiki-btn');
+
+function renderWikiTree(files) {
+    if (!wikiTreeContainer) return;
+    let html = `<div class="cursor-pointer hover:bg-gray-800/80 p-1.5 rounded transition-colors mb-1 ${currentEditingFile === 'AGENTS.md' ? 'text-primary-400 font-bold' : 'text-gray-300'}" onclick="loadAgentsMd()">
+        <i class="fa-solid fa-file-shield text-red-400 w-4 text-center mr-1"></i> AGENTS.md
+    </div>`;
+    
+    html += '<div class="text-[10px] text-gray-500 uppercase mt-3 mb-1 px-1 tracking-wider border-b border-gray-800 pb-1">Wiki Workspace</div>';
+
+    if (!files || files.length === 0) {
+        html += '<div class="text-xs text-gray-500 italic p-1">No hay archivos en la wiki.</div>';
+    } else {
+        files.forEach(file => {
+            const isActive = currentEditingFile === file;
+            html += `<div class="cursor-pointer hover:bg-gray-800/80 p-1.5 rounded transition-colors text-xs truncate flex items-center ${isActive ? 'text-primary-400 bg-gray-800/50 font-bold' : 'text-gray-400'}" onclick="loadWikiFile('${file}')">
+                <i class="fa-solid fa-file-lines text-blue-400 w-4 text-center mr-1"></i> <span class="truncate" title="${file}">${file}</span>
+            </div>`;
+        });
+    }
+    wikiTreeContainer.innerHTML = html;
+}
+
+window.loadAgentsMd = function() {
+    currentEditingFile = 'AGENTS.md';
+    if (currentFileLabel) currentFileLabel.textContent = currentEditingFile;
+    contextLoading.classList.remove('hidden');
+    socket.emit('get_agents_md');
+};
+
+window.loadWikiFile = function(filename) {
+    currentEditingFile = filename;
+    if (currentFileLabel) currentFileLabel.textContent = currentEditingFile;
+    contextLoading.classList.remove('hidden');
+    socket.emit('get_wiki_file', filename);
+};
+
+if (newWikiBtn) {
+    newWikiBtn.addEventListener('click', () => {
+        const filename = prompt("Nombre del nuevo archivo wiki (ej. Nuevo_Concepto):");
+        if (filename && filename.trim()) {
+            let name = filename.trim();
+            if (!name.endsWith('.md')) name += '.md';
+            currentEditingFile = name;
+            if (currentFileLabel) currentFileLabel.textContent = currentEditingFile;
+            contextEditor.value = `# ${name.replace('.md', '')}\n\n`;
+            renderWikiTree([]); // Trick to update active state, tree will refresh on save
+            socket.emit('get_wiki_tree');
+        }
+    });
+}
+
+socket.on('wiki_tree_data', (files) => {
+    renderWikiTree(files);
+});
+
+socket.on('wiki_file_data', ({ filename, content }) => {
+    contextLoading.classList.add('hidden');
+    contextEditor.value = content;
+    appendLog(`Archivo ${filename} cargado.`, 'system');
+    socket.emit('get_wiki_tree'); // Refresh tree to show active state
+});
+
+socket.on('wiki_file_saved', (msg) => {
+    appendLog(msg, 'success');
+    contextLoading.classList.add('hidden');
+    const originalHtml = saveContextBtn.innerHTML;
+    saveContextBtn.innerHTML = '<i class="fa-solid fa-check"></i> Guardado';
+    saveContextBtn.classList.add('bg-green-600');
+    setTimeout(() => {
+        saveContextBtn.innerHTML = originalHtml;
+        saveContextBtn.classList.remove('bg-green-600');
+    }, 2000);
+});
+
+// Update existing tab load logic to also fetch tree
+tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        const targetId = btn.getAttribute('data-target');
+        if (targetId === 'tab-context') {
+            socket.emit('get_wiki_tree');
+            if (currentEditingFile === 'AGENTS.md') {
+                socket.emit('get_agents_md');
+            } else {
+                socket.emit('get_wiki_file', currentEditingFile);
+            }
+        }
+    });
+});
+
 if (saveContextBtn) {
     saveContextBtn.addEventListener('click', () => {
         const content = contextEditor.value;
         contextLoading.classList.remove('hidden');
-        appendLog(`Guardando actualizaciones en AGENTS.md...`, 'system');
-        socket.emit('save_agents_md', content);
+        appendLog(`Guardando actualizaciones en ${currentEditingFile}...`, 'system');
+        if (currentEditingFile === 'AGENTS.md') {
+            socket.emit('save_agents_md', content);
+        } else {
+            socket.emit('save_wiki_file', { filename: currentEditingFile, content });
+        }
     });
 }

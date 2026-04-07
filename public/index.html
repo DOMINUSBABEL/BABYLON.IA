@@ -41,7 +41,7 @@
         <div class="container mx-auto flex justify-between items-center">
             <div class="flex items-center gap-3">
                 <i class="fa-solid fa-microchip text-2xl text-primary-500 animate-pulse"></i>
-                <h1 class="text-xl font-bold tracking-wider text-primary-500 glow-text">BABYLON.IA <span class="text-sm text-gray-500 font-normal">v2.0</span></h1>
+                <h1 class="babylonia-title">BABYLON.IA <span class="text-sm text-gray-500 font-normal" style="letter-spacing: normal;">v2.0</span></h1>
             </div>
             <div class="flex items-center gap-4 text-sm">
                 <!-- Theme Toggle -->
@@ -180,8 +180,11 @@
                                         <option value="gemini-2.5-flash">Gemini 2.5 Flash (Rápido)</option>
                                         <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro (Razonamiento)</option>
                                         <option value="gemini-2.0-flash-lite-preview">Gemini Flash Lite (Bajo consumo)</option>
+                                        <option value="codex">Codex (OpenAI/Azure)</option>
+                                        <option value="minimax">Minimax</option>
                                         <option value="ollama:llama3">Ollama: Llama 3 (Local)</option>
                                         <option value="aiedge:gemma-2b">Edge: Gemma 2B (Local Edge)</option>
+                                        <option value="aiedge:gemma-4b">Edge: Gemma 4B (Local Edge)</option>
                                         <option value="custom">Otro (Personalizado)</option>
                                     </select>
                                 </div>
@@ -189,6 +192,28 @@
                             <div>
                                 <label class="block text-sm text-gray-400 mb-1">Modelo Personalizado</label>
                                 <input type="text" id="config-custom-model" placeholder="ej: ollama:mistral" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-gray-300 disabled:opacity-50" disabled>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Heartbeat / Autoresearch Toggles -->
+                    <div class="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
+                        <h3 class="text-lg font-semibold text-gray-200 mb-3"><i class="fa-solid fa-heart-pulse text-red-500 mr-2 animate-pulse"></i> Heartbeat / Automejora (Geist Loop)</h3>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Intervalo de Autoresearch</label>
+                                <select id="config-heartbeat" class="w-full bg-gray-900 border border-red-500/30 rounded p-2 text-red-400 focus:border-red-500 outline-none">
+                                    <option value="0">Desactivado</option>
+                                    <option value="30">Cada 30 Minutos</option>
+                                    <option value="60">Cada 1 Hora</option>
+                                    <option value="120">Cada 2 Horas</option>
+                                    <option value="custom">Personalizado (Minutos)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Intervalo Personalizado (Min)</label>
+                                <input type="number" id="config-custom-heartbeat" placeholder="ej: 45" min="1" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-gray-300 disabled:opacity-50" disabled>
                             </div>
                         </div>
                     </div>
@@ -246,24 +271,46 @@
         </div>
 
         <!-- ==================== TAB: CONTEXT / WIKI ==================== -->
-        <div id="tab-context" class="tab-content hidden h-full w-full animate-fade-in">
+        <div id="tab-context" class="tab-content hidden h-full w-full animate-fade-in flex-grow">
             <div class="glass-panel rounded-lg p-5 shadow-lg h-full flex flex-col">
                 <div class="flex justify-between items-center mb-4 border-b border-gray-800 pb-2">
                     <h2 class="text-xl font-bold text-primary-400">
-                        <i class="fa-solid fa-book-journal-whills mr-2"></i> AGENTS.md / Contexto del Sistema
+                        <i class="fa-solid fa-book-journal-whills mr-2"></i> AGENTS.md / Contexto del Sistema / Wiki
                     </h2>
-                    <button id="save-context-btn" class="px-4 py-1.5 btn-primary rounded text-sm font-bold transition-colors flex items-center gap-2">
-                        <i class="fa-solid fa-floppy-disk"></i> Guardar
-                    </button>
+                    <div class="flex gap-2">
+                        <button id="new-wiki-btn" class="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded text-sm font-bold transition-colors flex items-center gap-2">
+                            <i class="fa-solid fa-plus"></i> Nuevo
+                        </button>
+                        <button id="save-context-btn" class="px-4 py-1.5 btn-primary rounded text-sm font-bold transition-colors flex items-center gap-2">
+                            <i class="fa-solid fa-floppy-disk"></i> Guardar
+                        </button>
+                    </div>
                 </div>
 
-                <p class="text-xs text-gray-400 mb-3">Edita el archivo base de conocimiento del agente. Este archivo dicta las reglas, tools disponibles y la personalidad base.</p>
+                <p class="text-xs text-gray-400 mb-3">Edita el archivo base de conocimiento del agente (AGENTS.md) o navega por los archivos de la wiki interna generada en el entorno.</p>
 
-                <div class="flex-grow relative rounded border border-primary-500/30 overflow-hidden">
-                    <div id="context-loading" class="absolute inset-0 bg-gray-900/80 flex items-center justify-center z-10 hidden">
-                        <i class="fa-solid fa-spinner fa-spin text-3xl text-primary-500"></i>
+                <div class="flex-grow flex gap-4 h-[500px]">
+                    <!-- Left Sidebar: File Tree -->
+                    <div class="w-64 bg-gray-900/80 rounded border border-primary-500/30 flex flex-col overflow-hidden">
+                        <div class="p-2 border-b border-gray-800 bg-gray-800/50 text-xs font-bold text-gray-300 uppercase">
+                            <i class="fa-solid fa-folder-tree mr-1"></i> Explorador
+                        </div>
+                        <div id="wiki-tree-container" class="flex-grow p-2 overflow-y-auto custom-scrollbar text-sm font-mono">
+                            <div class="text-gray-500 text-center py-4"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                        </div>
                     </div>
-                    <textarea id="context-editor" class="w-full h-[500px] bg-[#050a0f] text-gray-300 p-4 font-mono text-sm focus:outline-none resize-none custom-scrollbar" spellcheck="false">Cargando contexto...</textarea>
+
+                    <!-- Right Area: Editor -->
+                    <div class="flex-grow relative rounded border border-primary-500/30 overflow-hidden flex flex-col">
+                        <div class="bg-gray-800/80 p-2 border-b border-gray-700 text-xs font-mono text-primary-300 flex items-center gap-2">
+                            <i class="fa-solid fa-file-code"></i>
+                            <span id="current-file-label">AGENTS.md</span>
+                        </div>
+                        <div id="context-loading" class="absolute inset-0 bg-gray-900/80 flex items-center justify-center z-10 hidden">
+                            <i class="fa-solid fa-spinner fa-spin text-3xl text-primary-500"></i>
+                        </div>
+                        <textarea id="context-editor" class="w-full flex-grow bg-[#050a0f] text-gray-300 p-4 font-mono text-sm focus:outline-none resize-none custom-scrollbar" spellcheck="false">Cargando contexto...</textarea>
+                    </div>
                 </div>
             </div>
         </div>

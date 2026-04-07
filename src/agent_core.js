@@ -54,12 +54,12 @@ export async function processTask(prompt, updateProgress) {
     // Fase 2: ANTÍTESIS (Ejecución y Resolución de Conflictos)
     updateProgress("Antítesis (Estructuración): Integrando contexto del Tesauro Conceptual y resolviendo dependencias de la consulta...");
     
-    const babiloniaPath = process.env.LEGACY_KNOWLEDGE_DIR || "C:\\Users\\jegom\\OneDrive\\Desktop\\Investigaciones\\geist\\Sintesis_Babilonia_China";
+    const babiloniaPath = process.env.LEGACY_KNOWLEDGE_DIR || path.join(process.cwd(), 'workspace', 'geist');
     let knowledgeStatus = "Wiki Memory Activa";
     
     if (fs.existsSync(babiloniaPath)) {
         const subdirs = fs.readdirSync(babiloniaPath);
-        knowledgeStatus += ` | Base Legacy conectada (${subdirs.length} índices).`;
+        knowledgeStatus += ` | Base Geist Local conectada (${subdirs.length} índices).`;
     } else {
         knowledgeStatus += " | Operando en modo de inferencia pura con Tesauro local.";
     }
@@ -98,9 +98,12 @@ export async function processTask(prompt, updateProgress) {
             const geminiBin = process.platform === 'win32' ? 'gemini.cmd' : 'gemini';
             
             // Pasamos el comando como un solo string para evitar el DeprecationWarning de Node al usar shell: true con arrays
-            const geminiProcess = spawn(geminiBin, ['-m', activeModel, '-p', '.', '-o', 'json'], {
-                shell: process.platform === 'win32'
-            });
+            let geminiProcess;
+            if (process.platform === 'win32') {
+                geminiProcess = spawn(`${geminiBin} -m ${activeModel} -p . -o json`, { shell: true });
+            } else {
+                geminiProcess = spawn(geminiBin, ['-m', activeModel, '-p', '.', '-o', 'json']);
+            }
 
             let stdoutData = '';
             let stderrData = '';

@@ -21,8 +21,11 @@ export class WikiMemory {
             fs.mkdirSync(this.wikiDir, { recursive: true });
             console.log(chalk.green(`[+] Inicializando Tesauro Conceptual (Wiki Memory) en disco: ${this.wikiDir}`));
 
-            const indexContent = `# Índice Principal (Geist)\n\nBienvenido a la memoria raíz. Aquí se indexan los conceptos clave.\n\n## Conceptos Actuales\n- [[Reglas_Base]]\n- [[Historial_Reciente]]\n- [[Capacidades_Jules]]\n- [[Metodologia_XML_TEI]]\n- [[Analisis_Intertextual]]\n- [[Principios_FAIR]]\n`;
+            const indexContent = `# Índice Principal (Geist)\n\nBienvenido a la memoria raíz. Aquí se indexan los conceptos clave.\n\n## Conceptos Actuales\n- [[Reglas_Base]]\n- [[Historial_Reciente]]\n- [[Capacidades_Jules]]\n- [[Metodologia_XML_TEI]]\n- [[Analisis_Intertextual]]\n- [[Principios_FAIR]]\n- [[Subgeist_Automejora]]\n`;
             fs.writeFileSync(path.join(this.wikiDir, 'Index.md'), indexContent, 'utf-8');
+
+            const automejoraContent = `# Subgeist Automejora (Heartbeat)\n\nEste archivo es un buffer donde el agente anota, evalúa y propone optimizaciones de su propio código, arquitecturas o habilidades de las herramientas tras sus ciclos de 'Heartbeat'.\n\n## Estructura de Análisis:\n1. **Observaciones:** Problemas detectados (ej. lentitud, warnings).\n2. **Hipótesis:** Causa del problema.\n3. **Síntesis / PR Conceptual:** Posible solución a implementar o delegar.\n`;
+            fs.writeFileSync(path.join(this.wikiDir, 'Subgeist_Automejora.md'), automejoraContent, 'utf-8');
 
             const rulesContent = `# Reglas Base\n\n1. El agente opera bajo la Ley Cero.\n2. Preservar memoria en disco para ahorrar RAM.\n3. DelegaciÃ³n: Puedes sugerir al usuario el comando !geist jules <tarea> para tareas complejas.\n`;
             fs.writeFileSync(path.join(this.wikiDir, 'Reglas_Base.md'), rulesContent, 'utf-8');

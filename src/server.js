@@ -186,6 +186,8 @@ io.on('connection', (socket) => {
         socket.emit('config_data', currentConfig);
     });
 
+    let heartbeatIntervalId = null;
+
     socket.on('update_config', (newConfig) => {
         // En un entorno de producción real, esto debería guardar en un archivo .env
         // Por ahora, actualizamos process.env dinámicamente para la sesión actual
@@ -202,7 +204,74 @@ io.on('connection', (socket) => {
         process.env.ENABLED_PLATFORMS = platforms.join(',');
         console.log(chalk.yellow(`[Config] Plataformas activas actualizadas: ${process.env.ENABLED_PLATFORMS}`));
 
+        // Configuración del Heartbeat Loop
+        if (heartbeatIntervalId) clearInterval(heartbeatIntervalId);
+        
+        let intervalMins = 0;
+        if (newConfig.heartbeat === 'custom') {
+            intervalMins = parseInt(newConfig.customHeartbeat) || 0;
+        } else {
+            intervalMins = parseInt(newConfig.heartbeat) || 0;
+        }
+
+        if (intervalMins > 0) {
+            console.log(chalk.red(`[Geist] Heartbeat Loop activado cada ${intervalMins} minutos.`));
+            socket.emit('system_log', `Heartbeat/Autoresearch Loop activado: Ejecutándose cada ${intervalMins} minutos.`);
+            
+            heartbeatIntervalId = setInterval(async () => {
+                const autoPrompt = "Heartbeat Loop: Revisa tu subgeist_automejora.md interno. Analiza el historial reciente de operaciones, detecta cuellos de botella e infiere una optimización arquitectónica o crea un pull request conceptual de mejora.";
+                console.log(chalk.red(`\n[♥] Iniciando ciclo de automejora Geist (Heartbeat)...`));
+                io.emit('agent_status', 'Heartbeat Loop...');
+                try {
+                    let steps = [];
+                    const response = await processTask(autoPrompt, (text) => {
+                        steps.push(`• ${text}`);
+                        io.emit('agent_progress', text);
+                    });
+                    console.log(chalk.green(`[♥] Ciclo de automejora completado.`));
+                    io.emit('system_log', `Heartbeat completado. Revisa tu Wiki Memory para nuevas síntesis.`);
+                    io.emit('agent_status', 'En espera de directivas');
+                } catch(e) {
+                    console.error(chalk.red(`[♥] Error en Heartbeat: ${e.message}`));
+                    io.emit('system_error', `Error en Heartbeat Loop: ${e.message}`);
+                }
+            }, intervalMins * 60000);
+        } else {
+            console.log(chalk.gray(`[Geist] Heartbeat Loop desactivado.`));
+        }
+
         socket.emit('config_updated', 'Configuración de OPS actualizada en memoria.');
+    });
+
+    socket.on('check_local_models', () => {
+        // Simular o ejecutar un chequeo de modelos en el sistema (Ollama, Edge)
+        const { exec } = require('child_process');
+        
+        exec('ollama list', (err, stdout, stderr) => {
+            if (!err && stdout) {
+                socket.emit('system_log', `Modelos Ollama detectados:\n${stdout.split('\n').slice(1,4).join('\n')}`);
+            } else {
+                socket.emit('system_log', `Servicio Ollama no detectado o inactivo.`);
+            }
+        });
+
+        // Heurística básica para buscar modelos Gemma en descargas o rutas comunes de Android/Windows
+        const possiblePaths = [
+            path.join(process.env.USERPROFILE || process.env.HOME || '', 'Downloads', 'gemma-2b-it-cpu-int4.bin'),
+            path.join('/data/data/com.termux/files/home', 'models', 'gemma-2b.bin')
+        ];
+        
+        let foundEdge = false;
+        for (const p of possiblePaths) {
+            if (fs.existsSync(p)) {
+                socket.emit('system_log', `Local Edge Model detectado en: ${p}`);
+                foundEdge = true;
+                break;
+            }
+        }
+        if (!foundEdge) {
+            socket.emit('system_log', `No se detectaron binarios de Gemma Edge Model (E2B/E4B) en rutas predeterminadas.`);
+        }
     });
 
     socket.on('get_agents_md', () => {
@@ -223,6 +292,47 @@ io.on('connection', (socket) => {
             socket.emit('agents_md_saved', 'Contexto AGENTS.md guardado en disco exitosamente.');
         } catch (error) {
             console.error(chalk.red(`[Error] Fallo al guardar AGENTS.md: ${error.message}`));
+            socket.emit('system_error', `No se pudo guardar el archivo: ${error.message}`);
+        }
+    });
+
+    // --- NUEVAS RUTAS DASHBOARD WIKI TREE ---
+    socket.on('get_wiki_tree', () => {
+        const wikiDir = path.join(rootDir, 'workspace', 'wiki');
+        try {
+            if (!fs.existsSync(wikiDir)) {
+                fs.mkdirSync(wikiDir, { recursive: true });
+            }
+            const files = fs.readdirSync(wikiDir).filter(f => f.endsWith('.md'));
+            socket.emit('wiki_tree_data', files);
+        } catch (error) {
+            console.error(chalk.red(`[Error] Fallo al leer wiki tree: ${error.message}`));
+            socket.emit('system_error', `No se pudo leer el árbol de wiki: ${error.message}`);
+        }
+    });
+
+    socket.on('get_wiki_file', (filename) => {
+        const filePath = path.join(rootDir, 'workspace', 'wiki', filename);
+        try {
+            if (fs.existsSync(filePath)) {
+                const content = fs.readFileSync(filePath, 'utf8');
+                socket.emit('wiki_file_data', { filename, content });
+            } else {
+                socket.emit('system_error', `El archivo ${filename} no existe.`);
+            }
+        } catch (error) {
+            socket.emit('system_error', `No se pudo leer el archivo: ${error.message}`);
+        }
+    });
+
+    socket.on('save_wiki_file', ({ filename, content }) => {
+        const filePath = path.join(rootDir, 'workspace', 'wiki', filename);
+        try {
+            fs.writeFileSync(filePath, content, 'utf8');
+            console.log(chalk.green(`[Wiki] ${filename} actualizado desde el Dashboard.`));
+            socket.emit('wiki_file_saved', `Archivo ${filename} guardado exitosamente.`);
+            socket.emit('get_wiki_tree'); // Actualizar árbol por si es nuevo
+        } catch (error) {
             socket.emit('system_error', `No se pudo guardar el archivo: ${error.message}`);
         }
     });
