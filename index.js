@@ -4,6 +4,8 @@ import gradient from 'gradient-string';
 import ora from 'ora';
 import { getGeminiOAuthToken } from './src/auth.js';
 import { initWhatsAppClient } from './src/whatsapp.js';
+import { DiscordGateway } from './src/discord.js';
+import { metacognition } from './src/metacognition.js';
 
 // DiseÃ±o Visual al Iniciar
 function displayFancyHeader() {
@@ -44,9 +46,17 @@ async function startAgent() {
         const creds = getGeminiOAuthToken();
         spinner.succeed(chalk.green(`Conciencia enlazada. Token OAuth detectado para el cliente: ${chalk.bold(creds.client_id.substring(0,10))}...`));
 
-        // 2. Levantar la Interfaz MÃ³vil (WhatsApp)
-        console.log(chalk.cyanBright('\n[!] Iniciando Motor de ComunicaciÃ³n (WhatsApp Web)...'));
+        // Iniciar metacognición
+        metacognition.start();
+        console.log(chalk.cyanBright('\n[!] Motor Metacognitivo (Geist) iniciado en segundo plano.'));
+
+        // 2. Levantar la Interfaz Móvil (WhatsApp)
+        console.log(chalk.cyanBright('[!] Iniciando Motor de Comunicación (WhatsApp Web)...'));
         initWhatsAppClient();
+
+        // 3. Levantar Discord
+        const discord = new DiscordGateway(process.env.DISCORD_TOKEN);
+        await discord.boot();
 
     } catch (error) {
         spinner.fail(chalk.red('Error en el arranque de la conciencia.'));

@@ -59,57 +59,77 @@ export function initWhatsAppClient(agentEvents = null) {
         }
     }
 
-    const client = new Client({
-        authStrategy: new LocalAuth({ dataPath: './.wwebjs_auth' }),
-        puppeteer: {
-            args: puppeteerArgs,
-            executablePath: executablePath
-        }
-    });
+    let reconnectAttempts = 0;
+    const maxAttempts = 5;
 
-    client.on('qr', (qr) => {
-        console.log(chalk.cyanBright('\n[!] Escanea el código QR con tu WhatsApp (Dispositivos Vinculados) para enlazar la conciencia:'));
-        qrcode.generate(qr, { small: true });
-        
-        // Emitir el QR vía WebSocket al dashboard (convirtiendo a data URL en base64 para <img>)
-        if (agentEvents) {
-            import('qrcode').then(qrcodeModule => {
-                 qrcodeModule.toDataURL(qr, (err, url) => {
-                     if (!err) {
-                         agentEvents.emit('qr_code', url);
-                     }
-                 });
-            }).catch(err => {
-                console.error('Error importando el módulo "qrcode" para el dashboard:', err.message);
-            });
-        }
-    });
+    const bootClient = () => {
+        const client = new Client({
+            authStrategy: new LocalAuth({ dataPath: './.wwebjs_auth' }),
+            puppeteer: {
+                args: puppeteerArgs,
+                executablePath: executablePath
+            }
+        });
 
-    client.on('ready', () => {
-        console.log(chalk.greenBright.bold('\n✅ BABYLON.IA Conectado exitosamente a WhatsApp.'));
-        console.log(chalk.yellow('\nComandos disponibles vía chat:'));
-        console.log(chalk.gray('  - !geist <tu directiva>   : Inicia el bucle de razonamiento y automejora.'));
-        console.log(chalk.gray('  - !geist status          : Reporte de salud del motor OpenClaw y Gemini.'));
-        console.log(chalk.gray('  - !geist enviar <ruta>   : Extrae y envía un archivo local a tu WhatsApp.'));
-        console.log(chalk.magentaBright('\nEl Agente está en línea y a la espera de directivas...'));
-        
-        if (agentEvents) {
-            agentEvents.emit('whatsapp_ready');
+        client.on('qr', (qr) => {
+            console.log(chalk.cyanBright('\n[!] Escanea el código QR con tu WhatsApp (Dispositivos Vinculados) para enlazar la conciencia:'));
+            qrcode.generate(qr, { small: true });
+            
+            // Emitir el QR vía WebSocket al dashboard (convirtiendo a data URL en base64 para <img>)
+            if (agentEvents) {
+                import('qrcode').then(qrcodeModule => {
+                     qrcodeModule.toDataURL(qr, (err, url) => {
+                         if (!err) {
+                             agentEvents.emit('qr_code', url);
+                         }
+                     });
+                }).catch(err => {
+                    console.error('Error importando el módulo "qrcode" para el dashboard:', err.message);
+                });
+            }
+        });
 
-            // Escuchar peticiones de broadcast desde el Dashboard o TUI para sincronizar el historial
-            agentEvents.on('broadcast_whatsapp', async (text) => {
-                try {
-                    const myId = client.info.wid._serialized.replace(/:[0-9]+/, '');
-                    await client.sendMessage(myId, text);
-                    console.log(chalk.gray(`  -> Sincronizado historial con WhatsApp (Chat Personal).`));
-                } catch(e) {
-                    console.error(chalk.red(`Error sincronizando con WhatsApp: ${e.message}`));
-                }
-            });
-        }
-    });
+        client.on('ready', () => {
+            console.log(chalk.greenBright.bold('\n✅ BABYLON.IA Conectado exitosamente a WhatsApp.'));
+            console.log(chalk.yellow('\nComandos disponibles vía chat:'));
+            console.log(chalk.gray('  - !geist <tu directiva>   : Inicia el bucle de razonamiento y automejora.'));
+            console.log(chalk.gray('  - !geist status          : Reporte de salud del motor OpenClaw y Gemini.'));
+            console.log(chalk.gray('  - !geist enviar <ruta>   : Extrae y envía un archivo local a tu WhatsApp.'));
+            console.log(chalk.magentaBright('\nEl Agente está en línea y a la espera de directivas...'));
+            reconnectAttempts = 0;
+            
+            if (agentEvents) {
+                agentEvents.emit('whatsapp_ready');
 
-    client.on('message_create', async (msg) => {
+                // Escuchar peticiones de broadcast desde el Dashboard o TUI para sincronizar el historial
+                agentEvents.on('broadcast_whatsapp', async (text) => {
+                    try {
+                        const myId = client.info.wid._serialized.replace(/:[0-9]+/, '');
+                        await client.sendMessage(myId, text);
+                        console.log(chalk.gray(`  -> Sincronizado historial con WhatsApp (Chat Personal).`));
+                    } catch(e) {
+                        console.error(chalk.red(`Error sincronizando con WhatsApp: ${e.message}`));
+                    }
+                });
+            }
+        });
+
+        client.on('disconnected', (reason) => {
+            console.warn(chalk.yellow('⚠️ [Gateway] Ruptura del enlace. Motivo:'), reason);
+            if (reconnectAttempts < maxAttempts) {
+                reconnectAttempts++;
+                const delay = 5000 * Math.pow(2, reconnectAttempts);
+                console.log(chalk.cyan(`🔄 Secuencia de auto-curación en ${delay/1000}s... (Intento ${reconnectAttempts})`));
+                setTimeout(async () => {
+                    try { await client.destroy(); } catch (e) {}
+                    bootClient();
+                }, delay);
+            } else {
+                console.error(chalk.red('❌ [Gateway] Colapso total del nodo WhatsApp. Intervención manual requerida.'));
+            }
+        });
+
+        client.on('message_create', async (msg) => {
         // Ignoramos mensajes vacíos a menos que tengan archivos adjuntos
         if (!msg.body && !msg.hasMedia) return;
 
@@ -257,5 +277,5 @@ export function initWhatsAppClient(agentEvents = null) {
     });
 
     // Iniciar Puppeteer y el cliente
-    client.initialize();
+    bootClient();
 }

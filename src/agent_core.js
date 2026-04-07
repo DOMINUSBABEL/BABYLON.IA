@@ -5,6 +5,7 @@ import { WikiMemory } from './wiki_memory.js';
 import { TEIParser } from './tei_parser.js';
 import { exec } from 'child_process';
 import util from 'util';
+import { GoogleGenAI } from '@google/genai';
 
 const execPromise = util.promisify(exec);
 
@@ -154,34 +155,21 @@ export async function processTask(prompt, updateProgress) {
             const useGeminiCli = process.env.USE_GEMINI_CLI_OAUTH === 'true';
             
             if (!useGeminiCli && process.env.GEMINI_API_KEY) {
-                updateProgress(`Antítesis (Gemini REST API): Ejecutando inferencia directa (Fallback por limitación de CLI)...`);
-                // Direct REST API fetch to avoid CLI/stdin limits
-                const apiKey = process.env.GEMINI_API_KEY;
-                const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${apiKey}`;
-
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{
-                            role: "user",
-                            parts: [{ text: fullPrompt }]
-                        }],
-                        generationConfig: {
-                            temperature: 0.7,
-                            maxOutputTokens: 2048,
-                        }
-                    })
+                updateProgress(`Antítesis (Gemini SDK): Ejecutando inferencia con SDK oficial (Fallback por limitación de CLI)...`);
+                
+                const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+                
+                const response = await ai.models.generateContent({
+                    model: activeModel,
+                    contents: fullPrompt,
+                    config: {
+                        temperature: 0.7,
+                        maxOutputTokens: 2048,
+                    }
                 });
 
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(`Gemini API falló: ${response.status} - ${errorData.error?.message || response.statusText}`);
-                }
-                
-                const data = await response.json();
-                if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
-                    llmResponseText = data.candidates[0].content.parts[0].text;
+                if (response.text) {
+                    llmResponseText = response.text;
                 } else {
                     throw new Error("Respuesta de API de Gemini sin contenido válido.");
                 }
