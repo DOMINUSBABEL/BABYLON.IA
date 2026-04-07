@@ -168,7 +168,44 @@ The system is designed for deployment on any Node.js environment, including low-
     Invoke-WebRequest -Uri "https://raw.githubusercontent.com/DOMINUSBABEL/BABYLON.IA/master/install.ps1" -OutFile "install.ps1"; .\install.ps1
     ```
 
-### 5.3 System Boot & Configuration
+### 5.3 Detailed Termux (Android) Installation Guide
+
+To run BABYLON.IA natively on an Android device using Termux, follow these specific steps to prepare the environment:
+
+**Step 1: Install Termux & Basic Packages**
+Download the latest version of Termux from F-Droid (do not use the Google Play Store version as it is deprecated). Once opened, run:
+```bash
+pkg update && pkg upgrade -y
+pkg install git nodejs -y
+```
+
+**Step 2: Clone the Repository**
+```bash
+git clone https://github.com/DOMINUSBABEL/BABYLON.IA.git
+cd BABYLON.IA
+```
+
+**Step 3: Install Dependencies**
+Puppeteer (used for WhatsApp) requires special handling in Termux because it attempts to download a full Chromium binary. We bypass this and use the system's browser or a headless package:
+```bash
+export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+export PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+npm install
+```
+*(Note: If you plan to use the WhatsApp feature on Termux, ensure you have a compatible browser installed in Termux, e.g., `pkg install chromium`)*
+
+**Step 4: Link the CLI**
+```bash
+npm link
+```
+
+**Step 5: Edge Model Support (Optional)**
+If you plan to run local AI inference using Gemma E2B or E4B models on your phone:
+1. Download the `.bin` model files to your device.
+2. Move them to your Termux home directory: `mv /storage/emulated/0/Download/gemma-2b.bin ~/models/`
+3. The Dashboard's `check_local_models` event will automatically detect it.
+
+### 5.4 System Boot & Configuration
 
 **1. Run the Onboarding Configuration:**
 ```bash
