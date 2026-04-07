@@ -278,33 +278,55 @@
                         <i class="fa-solid fa-book-journal-whills mr-2"></i> AGENTS.md / Contexto del Sistema / Wiki
                     </h2>
                     <div class="flex gap-2">
+                        <!-- Hidden File Input for Uploading -->
+                        <input type="file" id="upload-wiki-input" class="hidden" multiple>
+
+                        <button id="upload-wiki-btn" class="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded text-sm font-bold transition-colors flex items-center gap-2" title="Subir archivo al workspace">
+                            <i class="fa-solid fa-upload"></i> Subir
+                        </button>
+
                         <button id="new-wiki-btn" class="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded text-sm font-bold transition-colors flex items-center gap-2">
                             <i class="fa-solid fa-plus"></i> Nuevo
                         </button>
+
+                        <button id="download-context-btn" class="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded text-sm font-bold transition-colors flex items-center gap-2" title="Descargar archivo seleccionado">
+                            <i class="fa-solid fa-download"></i>
+                        </button>
+
+                        <button id="delete-context-btn" class="px-4 py-1.5 bg-red-900/50 hover:bg-red-800/70 text-red-300 rounded text-sm font-bold transition-colors flex items-center gap-2" title="Eliminar archivo seleccionado">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+
                         <button id="save-context-btn" class="px-4 py-1.5 btn-primary rounded text-sm font-bold transition-colors flex items-center gap-2">
                             <i class="fa-solid fa-floppy-disk"></i> Guardar
                         </button>
                     </div>
                 </div>
 
-                <p class="text-xs text-gray-400 mb-3">Edita el archivo base de conocimiento del agente (AGENTS.md) o navega por los archivos de la wiki interna generada en el entorno.</p>
+                <p class="text-xs text-gray-400 mb-3">Administra el conocimiento del agente (AGENTS.md, geist.md, mcp, etc.). Todos los archivos en este entorno son asimilados por la mente del sistema.</p>
 
                 <div class="flex-grow flex gap-4 h-[500px]">
                     <!-- Left Sidebar: File Tree -->
-                    <div class="w-64 bg-gray-900/80 rounded border border-primary-500/30 flex flex-col overflow-hidden">
-                        <div class="p-2 border-b border-gray-800 bg-gray-800/50 text-xs font-bold text-gray-300 uppercase">
-                            <i class="fa-solid fa-folder-tree mr-1"></i> Explorador
+                    <div class="w-72 bg-gray-900/80 rounded border border-primary-500/30 flex flex-col overflow-hidden">
+                        <div class="p-2 border-b border-gray-800 bg-gray-800/50 text-xs font-bold text-gray-300 uppercase flex justify-between items-center">
+                            <span><i class="fa-solid fa-folder-tree mr-1"></i> Explorador de Workspace</span>
+                            <button id="refresh-tree-btn" class="text-gray-400 hover:text-white transition-colors" title="Refrescar árbol">
+                                <i class="fa-solid fa-rotate-right"></i>
+                            </button>
                         </div>
-                        <div id="wiki-tree-container" class="flex-grow p-2 overflow-y-auto custom-scrollbar text-sm font-mono">
+                        <div id="wiki-tree-container" class="flex-grow p-2 overflow-y-auto custom-scrollbar text-sm font-mono select-none">
                             <div class="text-gray-500 text-center py-4"><i class="fa-solid fa-spinner fa-spin"></i></div>
                         </div>
                     </div>
 
                     <!-- Right Area: Editor -->
-                    <div class="flex-grow relative rounded border border-primary-500/30 overflow-hidden flex flex-col">
-                        <div class="bg-gray-800/80 p-2 border-b border-gray-700 text-xs font-mono text-primary-300 flex items-center gap-2">
-                            <i class="fa-solid fa-file-code"></i>
-                            <span id="current-file-label">AGENTS.md</span>
+                    <div class="flex-grow relative rounded border border-primary-500/30 overflow-hidden flex flex-col bg-[#050a0f]">
+                        <div class="bg-gray-800/80 p-2 border-b border-gray-700 text-xs font-mono text-primary-300 flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-file-code"></i>
+                                <span id="current-file-label">AGENTS.md</span>
+                            </div>
+                            <span id="file-size-label" class="text-gray-500 text-[10px]"></span>
                         </div>
                         <div id="context-loading" class="absolute inset-0 bg-gray-900/80 flex items-center justify-center z-10 hidden">
                             <i class="fa-solid fa-spinner fa-spin text-3xl text-primary-500"></i>

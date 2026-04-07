@@ -88,23 +88,75 @@ export class WikiMemory {
     }
 
     /**
-     * Construye un contexto plano leyendo el Índice y los conceptos enlazados
-     * a partir de él para inyectarlos en la Tesis.
-     * En una implementación de LLM real, el LLM podría decidir qué conceptos leer.
+     * Helper para explorar el workspace recursivamente (omitiendo carpetas pesadas).
+     */
+    exploreWorkspace(dirPath, files = []) {
+        if (!fs.existsSync(dirPath)) return files;
+        const items = fs.readdirSync(dirPath);
+        for (const item of items) {
+            const itemPath = path.join(dirPath, item);
+            const stat = fs.statSync(itemPath);
+            if (stat.isDirectory()) {
+                if (item !== 'node_modules' && item !== '.git' && item !== 'media') {
+                    this.exploreWorkspace(itemPath, files);
+                }
+            } else {
+                if (item.endsWith('.md') || item.endsWith('.json') || item.includes('geist')) {
+                    files.push(itemPath);
+                }
+            }
+        }
+        return files;
+    }
+
+    /**
+     * Construye un contexto plano leyendo el Índice, los conceptos enlazados
+     * y asimilando inteligentemente todos los geist.md y subgeist.md en el workspace.
      */
     buildContext() {
-        let contextText = "--- MEMORIA WIKI (DISCO) ---\n";
+        let contextText = "--- MEMORIA WIKI / CONTEXTO DEL WORKSPACE ---\n";
 
-        const indexContent = this.readConcept('Index');
-        contextText += `[Index.md]:\n${indexContent}\n`;
+        // 1. Asimilar AGENTS.md raíz si existe
+        const rootDir = path.resolve(this.wikiDir, '..', '..');
+        const agentsMdPath = path.join(rootDir, 'AGENTS.md');
+        if (fs.existsSync(agentsMdPath)) {
+            const content = fs.readFileSync(agentsMdPath, 'utf-8') || '';
+            contextText += `[AGENTS.md (Root)]:\n${content.substring(0, 1500)}\n\n`;
+        }
 
-        // Leer superficialmente algunos conceptos del índice
+        // 2. Asimilar Index de Wiki
+        const indexContent = this.readConcept('Index') || '';
+        contextText += `[wiki/Index.md]:\n${indexContent}\n\n`;
+
+        // 3. Leer superficialmente conceptos enlazados en el índice
         const links = this.extractLinks(indexContent);
         for (const link of links) {
             const linkContent = this.readConcept(link);
             if (linkContent) {
-                // Solo adjuntamos un extracto o el inicio para no saturar tokens
-                contextText += `[${link}.md]:\n${linkContent.substring(0, 500)}\n`;
+                contextText += `[wiki/${link}.md]:\n${linkContent.substring(0, 500)}\n\n`;
+            }
+        }
+
+        // 4. Asimilar automáticamente todos los geist.md, subgeist.md y otros archivos clave del workspace
+        const workspacePath = path.resolve(this.wikiDir, '..');
+        const workspaceFiles = this.exploreWorkspace(workspacePath);
+
+        contextText += "--- ASIMILACIÓN AUTOMÁTICA DEL WORKSPACE ---\n";
+        for (const file of workspaceFiles) {
+            const fileName = path.basename(file);
+            const relativePath = path.relative(workspacePath, file);
+
+            // Ignorar los de la wiki base que ya asimilamos y archivos muy genéricos a menos que sean geist
+            if (file.includes(path.join('wiki', 'Index.md')) || links.some(l => file.includes(path.join('wiki', `${l}.md`)))) {
+                continue;
+            }
+
+            // Priorizar archivos que contengan "geist", "agent", o si el usuario subió nuevos ".md" o ".json"
+            if (fileName.toLowerCase().includes('geist') || fileName.toLowerCase().includes('agent') || fileName.endsWith('.md')) {
+                 const content = fs.readFileSync(file, 'utf-8') || '';
+                 // Limitamos el tamaño por archivo para no saturar el contexto si suben algo inmenso,
+                 // asimilamos los primeros 1000 caracteres de cada nuevo conocimiento.
+                 contextText += `[${relativePath}]:\n${content.substring(0, 1000)}\n\n`;
             }
         }
 
@@ -118,9 +170,10 @@ export class WikiMemory {
      * @param {string} result Síntesis obtenida
      */
     heartbeat(prompt, result) {
-        let history = this.readConcept('Historial_Reciente');
+        let history = this.readConcept('Historial_Reciente') || '';
         const timestamp = new Date().toISOString();
-        const newEntry = `\n## [${timestamp}]\n**Tesis:** ${prompt}\n**Síntesis:** ${result.substring(0, 150)}...\n`;
+        const cleanResult = result || '';
+        const newEntry = `\n## [${timestamp}]\n**Tesis:** ${prompt}\n**Síntesis:** ${cleanResult.substring(0, 150)}...\n`;
 
         // Mantener el archivo ligero truncándolo si es muy grande (ej > 5000 chars)
         if (history.length > 5000) {
