@@ -392,67 +392,209 @@ if (btnRefreshConfig) {
 
 // Context Actions
 let currentEditingFile = 'AGENTS.md';
+let currentFileSize = 0;
 const currentFileLabel = document.getElementById('current-file-label');
 const wikiTreeContainer = document.getElementById('wiki-tree-container');
 const newWikiBtn = document.getElementById('new-wiki-btn');
+const uploadWikiBtn = document.getElementById('upload-wiki-btn');
+const uploadWikiInput = document.getElementById('upload-wiki-input');
+const downloadContextBtn = document.getElementById('download-context-btn');
+const deleteContextBtn = document.getElementById('delete-context-btn');
+const refreshTreeBtn = document.getElementById('refresh-tree-btn');
+const fileSizeLabel = document.getElementById('file-size-label');
 
-function renderWikiTree(files) {
-    if (!wikiTreeContainer) return;
-    let html = `<div class="cursor-pointer hover:bg-gray-800/80 p-1.5 rounded transition-colors mb-1 ${currentEditingFile === 'AGENTS.md' ? 'text-primary-400 font-bold' : 'text-gray-300'}" onclick="loadAgentsMd()">
-        <i class="fa-solid fa-file-shield text-red-400 w-4 text-center mr-1"></i> AGENTS.md
-    </div>`;
+let currentTreeData = [];
+
+function renderTreeItem(item, padding = 0) {
+    const isDir = item.type === 'directory';
+    const isActive = currentEditingFile === item.path;
     
-    html += '<div class="text-[10px] text-gray-500 uppercase mt-3 mb-1 px-1 tracking-wider border-b border-gray-800 pb-1">Wiki Workspace</div>';
+    let icon = isDir ? '<i class="fa-solid fa-folder text-yellow-500 w-4 text-center mr-1"></i>'
+                     : '<i class="fa-solid fa-file-lines text-blue-400 w-4 text-center mr-1"></i>';
 
-    if (!files || files.length === 0) {
-        html += '<div class="text-xs text-gray-500 italic p-1">No hay archivos en la wiki.</div>';
+    if (item.name === 'AGENTS.md') icon = '<i class="fa-solid fa-file-shield text-red-400 w-4 text-center mr-1"></i>';
+    else if (item.name.endsWith('.json')) icon = '<i class="fa-solid fa-file-code text-green-400 w-4 text-center mr-1"></i>';
+    else if (item.name.includes('geist')) icon = '<i class="fa-solid fa-brain text-accent-400 w-4 text-center mr-1"></i>';
+
+    const paddingClass = `pl-${padding}`; // This doesn't work well with dynamic arbitrary values in JIT if not safe-listed, fallback to inline style
+
+    let html = `<div class="cursor-pointer hover:bg-gray-800/80 p-1.5 rounded transition-colors text-xs truncate flex items-center ${isActive && !isDir ? 'text-primary-400 bg-gray-800/50 font-bold' : 'text-gray-400'}"
+                     style="padding-left: ${padding * 12 + 6}px;"
+                     onclick="${isDir ? `toggleFolder('${item.path}')` : `loadWikiFile('${item.path}')`}">
+        ${icon} <span class="truncate" title="${item.name}">${item.name}</span>
+    </div>`;
+
+    if (isDir && item.isOpen && item.children) {
+        item.children.forEach(child => {
+            html += renderTreeItem(child, padding + 1);
+        });
+    }
+
+    return html;
+}
+
+window.toggleFolder = function(folderPath) {
+    // We'd need to find the item in currentTreeData and toggle its isOpen state
+    function findAndToggle(items) {
+        for (let item of items) {
+            if (item.path === folderPath) {
+                item.isOpen = !item.isOpen;
+                return true;
+            }
+            if (item.children && findAndToggle(item.children)) return true;
+        }
+        return false;
+    }
+    findAndToggle(currentTreeData);
+    renderWikiTree(currentTreeData);
+}
+
+
+function renderWikiTree(treeData) {
+    currentTreeData = treeData;
+    if (!wikiTreeContainer) return;
+
+    let html = '';
+
+    if (!treeData || treeData.length === 0) {
+        html = '<div class="text-xs text-gray-500 italic p-1">El workspace está vacío.</div>';
     } else {
-        files.forEach(file => {
-            const isActive = currentEditingFile === file;
-            html += `<div class="cursor-pointer hover:bg-gray-800/80 p-1.5 rounded transition-colors text-xs truncate flex items-center ${isActive ? 'text-primary-400 bg-gray-800/50 font-bold' : 'text-gray-400'}" onclick="loadWikiFile('${file}')">
-                <i class="fa-solid fa-file-lines text-blue-400 w-4 text-center mr-1"></i> <span class="truncate" title="${file}">${file}</span>
-            </div>`;
+        treeData.forEach(item => {
+            html += renderTreeItem(item, 0);
         });
     }
     wikiTreeContainer.innerHTML = html;
 }
 
-window.loadAgentsMd = function() {
-    currentEditingFile = 'AGENTS.md';
-    if (currentFileLabel) currentFileLabel.textContent = currentEditingFile;
+window.loadWikiFile = function(filepath) {
+    currentEditingFile = filepath;
+    if (currentFileLabel) {
+        const parts = filepath.split('/');
+        currentFileLabel.textContent = parts[parts.length - 1];
+    }
     contextLoading.classList.remove('hidden');
-    socket.emit('get_agents_md');
-};
-
-window.loadWikiFile = function(filename) {
-    currentEditingFile = filename;
-    if (currentFileLabel) currentFileLabel.textContent = currentEditingFile;
-    contextLoading.classList.remove('hidden');
-    socket.emit('get_wiki_file', filename);
+    if (filepath === 'AGENTS.md') {
+        socket.emit('get_agents_md');
+    } else {
+        socket.emit('get_wiki_file', filepath);
+    }
 };
 
 if (newWikiBtn) {
     newWikiBtn.addEventListener('click', () => {
-        const filename = prompt("Nombre del nuevo archivo wiki (ej. Nuevo_Concepto):");
+        const filename = prompt("Nombre del nuevo archivo (ej. geist.md o docs/nuevo.md):");
         if (filename && filename.trim()) {
             let name = filename.trim();
-            if (!name.endsWith('.md')) name += '.md';
+            // Default to root workspace dir conceptually
             currentEditingFile = name;
-            if (currentFileLabel) currentFileLabel.textContent = currentEditingFile;
-            contextEditor.value = `# ${name.replace('.md', '')}\n\n`;
-            renderWikiTree([]); // Trick to update active state, tree will refresh on save
+            if (currentFileLabel) currentFileLabel.textContent = name;
+            contextEditor.value = `# ${name}\n\n`;
+            if (fileSizeLabel) fileSizeLabel.textContent = '0 Bytes';
             socket.emit('get_wiki_tree');
         }
     });
 }
 
-socket.on('wiki_tree_data', (files) => {
-    renderWikiTree(files);
+if (uploadWikiBtn && uploadWikiInput) {
+    uploadWikiBtn.addEventListener('click', () => {
+        uploadWikiInput.click();
+    });
+
+    uploadWikiInput.addEventListener('change', (e) => {
+        const files = e.target.files;
+        if (!files.length) return;
+
+        contextLoading.classList.remove('hidden');
+        appendLog(`Iniciando carga de ${files.length} archivo(s)...`, 'system');
+
+        Array.from(files).forEach(file => {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                // If it's a text file we can send it as text, otherwise base64
+                let content = event.target.result;
+                let isText = false;
+
+                // Basic text check by extension or mime
+                if (file.type.startsWith('text/') || file.name.endsWith('.md') || file.name.endsWith('.json') || file.name.endsWith('.js') || file.name.endsWith('.csv') || file.name.endsWith('.xml')) {
+                     isText = true;
+                     const textReader = new FileReader();
+                     textReader.onload = (e2) => {
+                         socket.emit('upload_file', { filename: file.name, content: e2.target.result, isText: true });
+                     };
+                     textReader.readAsText(file);
+                } else {
+                     // Binary upload
+                     socket.emit('upload_file', { filename: file.name, content: content, isText: false });
+                }
+            };
+            reader.readAsDataURL(file); // This reads as base64 data url for binary fallback
+        });
+
+        // Reset input
+        uploadWikiInput.value = '';
+    });
+}
+
+if (deleteContextBtn) {
+    deleteContextBtn.addEventListener('click', () => {
+        if (!currentEditingFile) return;
+        if (confirm(`¿Estás seguro de que deseas eliminar permanentemente '${currentEditingFile}'? Esta acción asimilará la pérdida del conocimiento.`)) {
+            socket.emit('delete_wiki_file', currentEditingFile);
+            contextLoading.classList.remove('hidden');
+            contextEditor.value = '';
+            currentEditingFile = null;
+            if (currentFileLabel) currentFileLabel.textContent = 'Seleccione un archivo';
+        }
+    });
+}
+
+if (downloadContextBtn) {
+    downloadContextBtn.addEventListener('click', () => {
+        if (!currentEditingFile || !contextEditor.value) return;
+
+        const blob = new Blob([contextEditor.value], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+
+        // Extract filename from path
+        const parts = currentEditingFile.split('/');
+        a.download = parts[parts.length - 1];
+
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        appendLog(`Exportando ${currentEditingFile} a almacenamiento local.`, 'system');
+    });
+}
+
+if (refreshTreeBtn) {
+    refreshTreeBtn.addEventListener('click', () => {
+        socket.emit('get_wiki_tree');
+    });
+}
+
+function formatBytes(bytes, decimals = 2) {
+    if (!+bytes) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+}
+
+socket.on('wiki_tree_data', (treeData) => {
+    renderWikiTree(treeData);
 });
 
-socket.on('wiki_file_data', ({ filename, content }) => {
+socket.on('wiki_file_data', ({ filename, content, size }) => {
     contextLoading.classList.add('hidden');
     contextEditor.value = content;
+    if (fileSizeLabel && size !== undefined) {
+        fileSizeLabel.textContent = formatBytes(size);
+    }
     appendLog(`Archivo ${filename} cargado.`, 'system');
     socket.emit('get_wiki_tree'); // Refresh tree to show active state
 });
@@ -463,10 +605,29 @@ socket.on('wiki_file_saved', (msg) => {
     const originalHtml = saveContextBtn.innerHTML;
     saveContextBtn.innerHTML = '<i class="fa-solid fa-check"></i> Guardado';
     saveContextBtn.classList.add('bg-green-600');
+
+    if (contextEditor.value && fileSizeLabel) {
+         // rough estimation of bytes
+         const size = new Blob([contextEditor.value]).size;
+         fileSizeLabel.textContent = formatBytes(size);
+    }
+
     setTimeout(() => {
         saveContextBtn.innerHTML = originalHtml;
         saveContextBtn.classList.remove('bg-green-600');
     }, 2000);
+});
+
+socket.on('wiki_file_deleted', (msg) => {
+    appendLog(msg, 'success');
+    contextLoading.classList.add('hidden');
+    socket.emit('get_wiki_tree');
+});
+
+socket.on('file_upload_success', (msg) => {
+    appendLog(msg, 'success');
+    contextLoading.classList.add('hidden');
+    socket.emit('get_wiki_tree');
 });
 
 // Update existing tab load logic to also fetch tree
@@ -477,7 +638,7 @@ tabBtns.forEach(btn => {
             socket.emit('get_wiki_tree');
             if (currentEditingFile === 'AGENTS.md') {
                 socket.emit('get_agents_md');
-            } else {
+            } else if (currentEditingFile) {
                 socket.emit('get_wiki_file', currentEditingFile);
             }
         }

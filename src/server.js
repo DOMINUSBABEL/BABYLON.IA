@@ -296,29 +296,103 @@ io.on('connection', (socket) => {
         }
     });
 
-    // --- NUEVAS RUTAS DASHBOARD WIKI TREE ---
-    socket.on('get_wiki_tree', () => {
-        const wikiDir = path.join(rootDir, 'workspace', 'wiki');
-        try {
-            if (!fs.existsSync(wikiDir)) {
-                fs.mkdirSync(wikiDir, { recursive: true });
+    // --- NUEVAS RUTAS DASHBOARD WIKI TREE (Workspace Completo) ---
+    function buildDirectoryTree(dirPath, basePath = '') {
+        const tree = [];
+        const items = fs.readdirSync(dirPath);
+
+        // Add root AGENTS.md explicitly if we are at root, or handle it differently.
+        // Let's assume workspace is the root.
+
+        for (const item of items) {
+            const itemPath = path.join(dirPath, item);
+            const relPath = path.join(basePath, item).replace(/\\/g, '/');
+            const stat = fs.statSync(itemPath);
+
+            if (stat.isDirectory()) {
+                // Ignore node_modules, .git, etc if they happen to be there
+                if (item === 'node_modules' || item === '.git' || item === 'media' && basePath === '') continue;
+
+                tree.push({
+                    name: item,
+                    path: relPath,
+                    type: 'directory',
+                    isOpen: false, // Default state for UI
+                    children: buildDirectoryTree(itemPath, relPath)
+                });
+            } else {
+                tree.push({
+                    name: item,
+                    path: relPath,
+                    type: 'file',
+                    size: stat.size
+                });
             }
-            const files = fs.readdirSync(wikiDir).filter(f => f.endsWith('.md'));
-            socket.emit('wiki_tree_data', files);
+        }
+
+        // Sort: directories first, then files alphabetically
+        tree.sort((a, b) => {
+            if (a.type === 'directory' && b.type === 'file') return -1;
+            if (a.type === 'file' && b.type === 'directory') return 1;
+            return a.name.localeCompare(b.name);
+        });
+
+        return tree;
+    }
+
+    socket.on('get_wiki_tree', () => {
+        const workspaceDir = path.join(rootDir, 'workspace');
+        try {
+            if (!fs.existsSync(workspaceDir)) {
+                fs.mkdirSync(workspaceDir, { recursive: true });
+                // Also ensure wiki dir inside workspace
+                fs.mkdirSync(path.join(workspaceDir, 'wiki'), { recursive: true });
+            }
+
+            let tree = buildDirectoryTree(workspaceDir);
+
+            // Add root AGENTS.md to the tree explicitly at the top level
+            if (fs.existsSync(path.join(rootDir, 'AGENTS.md'))) {
+                const stat = fs.statSync(path.join(rootDir, 'AGENTS.md'));
+                tree.unshift({
+                    name: 'AGENTS.md',
+                    path: 'AGENTS.md', // Special path identifier
+                    type: 'file',
+                    size: stat.size
+                });
+            }
+
+            socket.emit('wiki_tree_data', tree);
         } catch (error) {
-            console.error(chalk.red(`[Error] Fallo al leer wiki tree: ${error.message}`));
-            socket.emit('system_error', `No se pudo leer el árbol de wiki: ${error.message}`);
+            console.error(chalk.red(`[Error] Fallo al leer workspace tree: ${error.message}`));
+            socket.emit('system_error', `No se pudo leer el árbol del workspace: ${error.message}`);
         }
     });
 
-    socket.on('get_wiki_file', (filename) => {
-        const filePath = path.join(rootDir, 'workspace', 'wiki', filename);
+    // Helper to validate paths and prevent Path Traversal
+    function resolveAndValidatePath(basePath, relativePath) {
+        const fullPath = path.resolve(basePath, relativePath);
+        if (!fullPath.startsWith(path.resolve(basePath))) {
+            throw new Error('Intento de acceso a ruta no autorizada detectado.');
+        }
+        return fullPath;
+    }
+
+    socket.on('get_wiki_file', (filepath) => {
+        let fullPath;
         try {
-            if (fs.existsSync(filePath)) {
-                const content = fs.readFileSync(filePath, 'utf8');
-                socket.emit('wiki_file_data', { filename, content });
+            if (filepath === 'AGENTS.md') {
+                fullPath = path.join(rootDir, 'AGENTS.md');
             } else {
-                socket.emit('system_error', `El archivo ${filename} no existe.`);
+                fullPath = resolveAndValidatePath(path.join(rootDir, 'workspace'), filepath);
+            }
+
+            if (fs.existsSync(fullPath)) {
+                const content = fs.readFileSync(fullPath, 'utf8');
+                const stat = fs.statSync(fullPath);
+                socket.emit('wiki_file_data', { filename: filepath, content, size: stat.size });
+            } else {
+                socket.emit('system_error', `El archivo ${filepath} no existe.`);
             }
         } catch (error) {
             socket.emit('system_error', `No se pudo leer el archivo: ${error.message}`);
@@ -326,14 +400,62 @@ io.on('connection', (socket) => {
     });
 
     socket.on('save_wiki_file', ({ filename, content }) => {
-        const filePath = path.join(rootDir, 'workspace', 'wiki', filename);
+        let fullPath;
         try {
-            fs.writeFileSync(filePath, content, 'utf8');
-            console.log(chalk.green(`[Wiki] ${filename} actualizado desde el Dashboard.`));
+            if (filename === 'AGENTS.md') {
+                fullPath = path.join(rootDir, 'AGENTS.md');
+            } else {
+                fullPath = resolveAndValidatePath(path.join(rootDir, 'workspace'), filename);
+                // Ensure directory exists if saving in a nested path
+                const dir = path.dirname(fullPath);
+                if (!fs.existsSync(dir)) {
+                    fs.mkdirSync(dir, { recursive: true });
+                }
+            }
+            fs.writeFileSync(fullPath, content, 'utf8');
+            console.log(chalk.green(`[Workspace] ${filename} actualizado desde el Dashboard.`));
             socket.emit('wiki_file_saved', `Archivo ${filename} guardado exitosamente.`);
-            socket.emit('get_wiki_tree'); // Actualizar árbol por si es nuevo
+            socket.emit('get_wiki_tree'); // Actualizar árbol
         } catch (error) {
             socket.emit('system_error', `No se pudo guardar el archivo: ${error.message}`);
+        }
+    });
+
+    socket.on('delete_wiki_file', (filepath) => {
+        let fullPath;
+        try {
+            if (filepath === 'AGENTS.md') {
+                fullPath = path.join(rootDir, 'AGENTS.md');
+            } else {
+                fullPath = resolveAndValidatePath(path.join(rootDir, 'workspace'), filepath);
+            }
+
+            if (fs.existsSync(fullPath)) {
+                fs.unlinkSync(fullPath);
+                console.log(chalk.yellow(`[Workspace] Archivo eliminado: ${filepath}`));
+                socket.emit('wiki_file_deleted', `El archivo ${filepath} fue eliminado de la memoria.`);
+            }
+        } catch (error) {
+            socket.emit('system_error', `No se pudo eliminar el archivo: ${error.message}`);
+        }
+    });
+
+    socket.on('upload_file', ({ filename, content, isText }) => {
+        try {
+            // Validate the path to prevent directory traversal in the filename
+            const fullPath = resolveAndValidatePath(path.join(rootDir, 'workspace'), path.basename(filename));
+
+            if (isText) {
+                fs.writeFileSync(fullPath, content, 'utf8');
+            } else {
+                // Remove data URL prefix if present (e.g., data:image/png;base64,...)
+                const base64Data = content.replace(/^data:([A-Za-z-+/]+);base64,/, '');
+                fs.writeFileSync(fullPath, base64Data, 'base64');
+            }
+            console.log(chalk.green(`[Workspace] Archivo subido exitosamente: ${filename}`));
+            socket.emit('file_upload_success', `Archivo ${filename} asimilado en el Workspace.`);
+        } catch (error) {
+            socket.emit('system_error', `Error al subir el archivo: ${error.message}`);
         }
     });
 
