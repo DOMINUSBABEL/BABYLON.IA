@@ -243,9 +243,9 @@ io.on('connection', (socket) => {
         socket.emit('config_updated', 'Configuración de OPS actualizada en memoria.');
     });
 
-    socket.on('check_local_models', () => {
+    socket.on('check_local_models', async () => {
         // Simular o ejecutar un chequeo de modelos en el sistema (Ollama, Edge)
-        const { exec } = require('child_process');
+        const { exec } = await import('child_process');
         
         exec('ollama list', (err, stdout, stderr) => {
             if (!err && stdout) {
