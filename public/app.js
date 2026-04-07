@@ -97,6 +97,52 @@ if (configHeartbeat) {
     });
 }
 
+// Syntax Highlighting and sync
+function getLanguageFromFilename(filename) {
+    if (!filename) return 'plaintext';
+    if (filename.endsWith('.js')) return 'javascript';
+    if (filename.endsWith('.json')) return 'json';
+    if (filename.endsWith('.md')) return 'markdown';
+    if (filename.endsWith('.html')) return 'html';
+    if (filename.endsWith('.css')) return 'css';
+    if (filename.endsWith('.xml')) return 'xml';
+    if (filename.endsWith('.sh')) return 'bash';
+    return 'plaintext';
+}
+
+function updateSyntaxHighlighting(filename) {
+    if (!contextEditor || !contextHighlightCode) return;
+
+    // Escape HTML from textarea content so it renders correctly in code block
+    let content = contextEditor.value;
+    content = content.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+
+    // Add empty space at end to allow scrolling past last line if needed
+    if (content.endsWith('\n')) content += ' ';
+
+    contextHighlightCode.innerHTML = content;
+    contextHighlightCode.className = `language-${getLanguageFromFilename(filename)}`;
+
+    // Re-apply highlight.js
+    if (window.hljs) {
+        hljs.highlightElement(contextHighlightCode);
+    }
+}
+
+// Sync Editor interactions to highlight block
+if (contextEditor) {
+    contextEditor.addEventListener('input', () => {
+        updateSyntaxHighlighting(currentEditingFile);
+    });
+
+    contextEditor.addEventListener('scroll', () => {
+        if (contextHighlightContainer) {
+            contextHighlightContainer.scrollTop = contextEditor.scrollTop;
+            contextHighlightContainer.scrollLeft = contextEditor.scrollLeft;
+        }
+    });
+}
+
 // Utilidad para autoscroll
 function scrollToBottom(el) {
     if (el) el.scrollTop = el.scrollHeight;
@@ -267,9 +313,11 @@ socket.on('agents_md_data', (content) => {
     contextLoading.classList.add('hidden');
     if (content) {
         contextEditor.value = content;
+        updateSyntaxHighlighting('AGENTS.md');
         appendLog('AGENTS.md cargado desde el disco.', 'system');
     } else {
         contextEditor.value = "No se encontró AGENTS.md en la raíz del proyecto.";
+        updateSyntaxHighlighting('AGENTS.md');
         appendLog('No se encontró AGENTS.md.', 'error');
     }
 });
@@ -396,6 +444,11 @@ let currentFileSize = 0;
 const currentFileLabel = document.getElementById('current-file-label');
 const wikiTreeContainer = document.getElementById('wiki-tree-container');
 const newWikiBtn = document.getElementById('new-wiki-btn');
+const contextEditor = document.getElementById('context-editor');
+const contextLoading = document.getElementById('context-loading');
+const saveContextBtn = document.getElementById('save-context-btn');
+const contextHighlightCode = document.getElementById('context-highlight-code');
+const contextHighlightContainer = document.getElementById('context-highlight-container');
 const uploadWikiBtn = document.getElementById('upload-wiki-btn');
 const uploadWikiInput = document.getElementById('upload-wiki-input');
 const downloadContextBtn = document.getElementById('download-context-btn');
@@ -489,6 +542,7 @@ if (newWikiBtn) {
             currentEditingFile = name;
             if (currentFileLabel) currentFileLabel.textContent = name;
             contextEditor.value = `# ${name}\n\n`;
+            updateSyntaxHighlighting(name);
             if (fileSizeLabel) fileSizeLabel.textContent = '0 Bytes';
             socket.emit('get_wiki_tree');
         }
@@ -542,6 +596,7 @@ if (deleteContextBtn) {
             socket.emit('delete_wiki_file', currentEditingFile);
             contextLoading.classList.remove('hidden');
             contextEditor.value = '';
+            updateSyntaxHighlighting('');
             currentEditingFile = null;
             if (currentFileLabel) currentFileLabel.textContent = 'Seleccione un archivo';
         }
@@ -592,6 +647,7 @@ socket.on('wiki_tree_data', (treeData) => {
 socket.on('wiki_file_data', ({ filename, content, size }) => {
     contextLoading.classList.add('hidden');
     contextEditor.value = content;
+    updateSyntaxHighlighting(filename);
     if (fileSizeLabel && size !== undefined) {
         fileSizeLabel.textContent = formatBytes(size);
     }

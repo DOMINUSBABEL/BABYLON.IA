@@ -32,6 +32,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Socket.io -->
     <script src="/socket.io/socket.io.js"></script>
+    <!-- Highlight.js for Syntax Highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body id="app-body" class="theme-azul-oro font-mono min-h-screen flex flex-col transition-colors duration-300">
@@ -331,7 +334,12 @@
                         <div id="context-loading" class="absolute inset-0 bg-gray-900/80 flex items-center justify-center z-10 hidden">
                             <i class="fa-solid fa-spinner fa-spin text-3xl text-primary-500"></i>
                         </div>
-                        <textarea id="context-editor" class="w-full flex-grow bg-[#050a0f] text-gray-300 p-4 font-mono text-sm focus:outline-none resize-none custom-scrollbar" spellcheck="false">Cargando contexto...</textarea>
+                        <div class="relative flex-grow flex flex-col w-full h-full overflow-hidden bg-[#050a0f]">
+                            <!-- The highlighted code sits behind the transparent textarea -->
+                            <pre id="context-highlight-container" class="absolute inset-0 m-0 p-4 font-mono text-sm pointer-events-none custom-scrollbar overflow-hidden" aria-hidden="true"><code id="context-highlight-code" class="language-markdown" style="background: transparent;"></code></pre>
+                            <!-- The actual editable textarea is transparent to show the syntax highlighting behind it -->
+                            <textarea id="context-editor" class="absolute inset-0 m-0 w-full h-full bg-transparent text-transparent caret-white p-4 font-mono text-sm focus:outline-none resize-none custom-scrollbar" spellcheck="false" style="color: transparent;">Cargando contexto...</textarea>
+                        </div>
                     </div>
                 </div>
             </div>
