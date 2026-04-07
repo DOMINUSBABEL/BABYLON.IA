@@ -66,6 +66,59 @@ export async function runOnboard() {
     choices: modelChoices
   });
 
+  const isLocalModel = model.startsWith('ollama:') || model.startsWith('aiedge:') || model.startsWith('mlx:');
+  if (isLocalModel) {
+      const downloadLocal = await confirm({ message: `El modelo seleccionado (${model}) es de ejecución local. ¿Deseas que BABYLON.IA lo descargue e instale ahora de forma óptima para tu entorno?` });
+      
+      if (downloadLocal) {
+          const { execSync } = await import('child_process');
+          
+          if (model.startsWith('ollama:')) {
+              const ollamaModel = model.replace('ollama:', '');
+              console.log(chalk.yellow(`\n[!] Iniciando descarga a través del motor Ollama: ${ollamaModel}`));
+              try {
+                  execSync(`ollama pull ${ollamaModel}`, { stdio: 'inherit' });
+                  console.log(chalk.green(`[✓] Modelo ${ollamaModel} instalado correctamente en el servicio Ollama.`));
+              } catch (error) {
+                  console.error(chalk.red(`\n[X] Error al intentar descargar en Ollama. Asegúrate de tener Ollama instalado y en ejecución en tu sistema.`));
+                  console.log(chalk.gray(`Si estás en Termux (Android), considera instalar Ollama vía proot-distro o usar modelos AI Edge (GGUF).`));
+              }
+          } else if (model.startsWith('aiedge:')) {
+              // Descargar archivo GGUF a la carpeta models
+              const modelsDir = path.join(rootDir, 'workspace', 'models');
+              if (!fs.existsSync(modelsDir)) fs.mkdirSync(modelsDir, { recursive: true });
+              
+              const is2B = model.includes('2b');
+              const modelName = is2B ? 'gemma-2-2b-it-Q4_K_M.gguf' : 'qwen2.5-3b-instruct-q4_k_m.gguf';
+              const destPath = path.join(modelsDir, modelName);
+              
+              // URLs públicas de HuggingFace optimizadas (GGUF cuantizados para correr en CPU/móvil)
+              const downloadUrl = is2B 
+                  ? "https://huggingface.co/bartowski/gemma-2-2b-it-GGUF/resolve/main/gemma-2-2b-it-Q4_K_M.gguf"
+                  : "https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf";
+                  
+              console.log(chalk.yellow(`\n[!] Iniciando descarga directa del binario cuantizado Edge (${modelName}) a ${modelsDir}...`));
+              console.log(chalk.gray(`Descargando desde: ${downloadUrl}\n(Esto puede tardar varios minutos dependiendo de tu conexión)`));
+              
+              try {
+                  if (process.platform === 'win32') {
+                      execSync(`powershell -NoProfile -Command "Invoke-WebRequest -Uri '${downloadUrl}' -OutFile '${destPath}'"`, { stdio: 'inherit' });
+                  } else {
+                      // Para Termux/Linux/macOS usamos curl que muestra barra de progreso por defecto con stdio: inherit
+                      execSync(`curl -L -C - -o "${destPath}" "${downloadUrl}"`, { stdio: 'inherit' });
+                  }
+                  console.log(chalk.green(`\n[✓] Binario Edge instalado exitosamente en: ${destPath}`));
+              } catch(e) {
+                  console.error(chalk.red(`\n[X] Error en la descarga del modelo Edge: ${e.message}`));
+                  console.log(chalk.yellow(`Puedes descargarlo manualmente desde un navegador y moverlo a la ruta: ${destPath}`));
+              }
+          } else if (model.startsWith('mlx:')) {
+              console.log(chalk.yellow(`\n[!] Para modelos MLX en macOS, asegúrate de tener el framework de Apple instalado.`));
+              console.log(chalk.cyan(`Puedes instalarlo ejecutando: pip install mlx-lm`));
+          }
+      }
+  }
+
   // 3. Platform integrations
   const platforms = await checkbox({
     message: 'Selecciona las plataformas donde el agente estará activo (Usa la barra espaciadora):',

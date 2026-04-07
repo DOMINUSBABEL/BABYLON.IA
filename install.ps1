@@ -28,7 +28,7 @@ try {
         Write-Host "[OK] Node.js instalado. (Es posible que debas reiniciar tu terminal después)" -ForegroundColor Green
         $needRestart = $true
     } catch {
-        Write-Host "[ERROR] No se pudo instalar Node.js automáticamente." -ForegroundColor Red
+        Write-Host "[ERROR] No se pudo instalar Node.js automaticamente." -ForegroundColor Red
         Write-Host "Por favor, instala Node.js manualmente (https://nodejs.org/) y vuelve a intentar." -ForegroundColor Yellow
         exit 1
     }
@@ -44,7 +44,7 @@ try {
         Write-Host "[OK] Git instalado." -ForegroundColor Green
         $needRestart = $true
     } catch {
-        Write-Host "[ERROR] No se pudo instalar Git automáticamente. Es necesario para descargar el código." -ForegroundColor Red
+        Write-Host "[ERROR] No se pudo instalar Git automaticamente. Es necesario para descargar el código." -ForegroundColor Red
         exit 1
     }
 }
