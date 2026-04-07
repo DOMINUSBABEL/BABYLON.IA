@@ -2,9 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
-import { getGeminiOAuthToken, refreshGeminiToken } from '../src/auth.js';
+import { getGeminiOAuthToken } from '../src/auth.js';
 
-test('getGeminiOAuthToken returns credentials when file exists', (t) => {
+test('getGeminiOAuthToken returns credentials when file exists', async (t) => {
   const mockHomedir = '/home/user';
   const mockCreds = { access_token: 'abc', refresh_token: 'def' };
 
@@ -15,38 +15,36 @@ test('getGeminiOAuthToken returns credentials when file exists', (t) => {
     }
     return false;
   });
-  t.mock.method(fs, 'readFileSync', (path, encoding) => {
+  // Mock fs.promises.readFile since getGeminiOAuthToken uses it
+  t.mock.method(fs.promises, 'readFile', async (path, encoding) => {
     if (path.includes('.gemini') && path.includes('oauth_creds.json')) {
       return JSON.stringify(mockCreds);
     }
     throw new Error('File not found');
   });
 
-  const result = getGeminiOAuthToken();
+  const result = await getGeminiOAuthToken();
   assert.deepStrictEqual(result, mockCreds);
 });
 
-test('getGeminiOAuthToken throws error when file does not exist', (t) => {
+test('getGeminiOAuthToken throws error when file does not exist', async (t) => {
   t.mock.method(os, 'homedir', () => '/home/user');
   t.mock.method(fs, 'existsSync', () => false);
 
-  assert.throws(() => getGeminiOAuthToken(), {
-    message: /No se encontró el archivo de credenciales/
-  });
+  await assert.rejects(
+    async () => await getGeminiOAuthToken(),
+    { message: /No se encontró el archivo de credenciales/ }
+  );
 });
 
-test('getGeminiOAuthToken throws error when JSON is invalid', (t) => {
+test('getGeminiOAuthToken throws error when JSON is invalid', async (t) => {
   t.mock.method(os, 'homedir', () => '/home/user');
   t.mock.method(fs, 'existsSync', () => true);
-  t.mock.method(fs, 'readFileSync', () => 'invalid json');
 
-  assert.throws(() => getGeminiOAuthToken(), {
-    message: /Error leyendo o parseando oauth_creds.json/
-  });
-});
+  t.mock.method(fs.promises, 'readFile', async () => 'invalid json');
 
-test('refreshGeminiToken returns input credentials (mock function)', (t) => {
-  const mockCreds = { access_token: 'abc', refresh_token: 'def' };
-  const result = refreshGeminiToken(mockCreds);
-  assert.deepStrictEqual(result, mockCreds);
+  await assert.rejects(
+    async () => await getGeminiOAuthToken(),
+    { message: /Error leyendo o parseando oauth_creds.json/ }
+  );
 });

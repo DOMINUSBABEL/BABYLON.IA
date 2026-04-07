@@ -21,7 +21,7 @@ export class WikiMemory {
             fs.mkdirSync(this.wikiDir, { recursive: true });
             console.log(chalk.green(`[+] Inicializando Tesauro Conceptual (Wiki Memory) en disco: ${this.wikiDir}`));
 
-            const indexContent = `# Índice Principal (Geist)\n\nBienvenido a la memoria raíz. Aquí se indexan los conceptos clave.\n\n## Conceptos Actuales\n- [[Reglas_Base]]\n- [[Historial_Reciente]]\n`;
+            const indexContent = `# Índice Principal (Geist)\n\nBienvenido a la memoria raíz. Aquí se indexan los conceptos clave.\n\n## Conceptos Actuales\n- [[Reglas_Base]]\n- [[Historial_Reciente]]\n- [[Capacidades_Jules]]\n- [[Metodologia_XML_TEI]]\n- [[Analisis_Intertextual]]\n- [[Principios_FAIR]]\n`;
             fs.writeFileSync(path.join(this.wikiDir, 'Index.md'), indexContent, 'utf-8');
 
             const rulesContent = `# Reglas Base\n\n1. El agente opera bajo la Ley Cero.\n2. Preservar memoria en disco para ahorrar RAM.\n3. DelegaciÃ³n: Puedes sugerir al usuario el comando !geist jules <tarea> para tareas complejas.\n`;
@@ -29,8 +29,20 @@ export class WikiMemory {
 
             const historyContent = `# Historial Reciente\n\nRegistro de actividades.\n`;
             fs.writeFileSync(path.join(this.wikiDir, 'Historial_Reciente.md'), historyContent, 'utf-8');
+
             const julesCapContent = `# Capacidades de Jules\n\nEl sistema BABYLON.IA integra el CLI de Jules de Google para automejora.\nSi el usuario pide mejoras complejas, despliegues, modificaciones de wiki.md, mcp, o habilidades:\n1. El agente debe responder proponiendo usar el asistente Jules.\n2. Se le indica al usuario que use: !geist jules <descripciÃ³n de la tarea>.\n3. Una vez finalizado, se integrarÃ¡ con: !geist jules-pull <session-id>.\n`;
             fs.writeFileSync(path.join(this.wikiDir, 'Capacidades_Jules.md'), julesCapContent, 'utf-8');
+
+            // --- Nuevos módulos de Humanidades Digitales (Inspirados en A. Echavarría) ---
+
+            const teiContent = `# Metodología XML-TEI\n\nEl estándar XML-TEI (Text Encoding Initiative) es fundamental para la codificación y edición de textos en Humanidades Digitales.\n\n## Principios:\n1. **Anotación Textual Estructurada**: Usar etiquetas semánticas para marcar entidades, relaciones y variaciones documentales.\n2. **Tesauros y Vocabularios Controlados**: Integración con RDF/SKOS para construir ontologías y normalizar términos, vital para análisis de corpus históricos y procesos inquisitoriales.\n3. **Métricas HTR/ATR**: Al evaluar transcripciones automáticas de impresos antiguos, considerar métricas como CER (Character Error Rate) y WER (Word Error Rate).\n\nEl agente debe guiar al usuario a estructurar datos textuales usando estos estándares para rigor científico.\n`;
+            fs.writeFileSync(path.join(this.wikiDir, 'Metodologia_XML_TEI.md'), teiContent, 'utf-8');
+
+            const intertextualContent = `# Análisis Intertextual\n\nEl análisis intertextual y de redes es el estudio de las relaciones entre diferentes textos y documentos.\n\n## Capacidades del Agente:\n1. **Representación de Redes**: Fomentar la extracción de grafos y relaciones a partir de atributos en etiquetas XML-TEI.\n2. **Variabilidad Documental**: Clasificar y reusar información cruzando bases de datos heterogéneas, estableciendo mappings de metadatos (Dublin Core, TEI, MODS).\n3. **Deconstrucción**: Aplicar el marco derrideano para identificar redes de significado latentes en grandes corpus documentales.\n`;
+            fs.writeFileSync(path.join(this.wikiDir, 'Analisis_Intertextual.md'), intertextualContent, 'utf-8');
+
+            const fairContent = `# Principios FAIR\n\nGestión de datos científicos rigurosa para garantizar la perennidad de los saberes.\n\n1. **Findable (Encontrables)**: Uso de metadatos ricos y persistentes (PIDs).\n2. **Accessible (Accesibles)**: Protocolos estándar de recuperación de datos.\n3. **Interoperable (Interoperables)**: Uso de lenguajes documentales formales, ontologías accesibles (SKOS/RDF) y XML-TEI.\n4. **Reusable (Reutilizables)**: Licencias claras de uso y procedencia documentada.\n\nTodo output estructurado sugerido por BABYLON.IA debe apuntar a cumplir el estándar FAIR.\n`;
+            fs.writeFileSync(path.join(this.wikiDir, 'Principios_FAIR.md'), fairContent, 'utf-8');
         }
     }
 
