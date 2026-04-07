@@ -88,86 +88,192 @@ export async function processTask(prompt, updateProgress) {
             const data = await response.json();
             llmResponseText = data.response;
 
-        } else {
-            updateProgress(`Antítesis (Gemini CLI): Desplegando agentes cognitivos y ejecutando inferencia sobre el modelo ${activeModel}...`);
-            
-            // Usamos spawn para inyectar el contexto por la entrada estándar (stdin) y evitar el límite de longitud en terminales
-            // Esto utiliza de forma nativa los scopes OAuth y tokens que ya tiene validados el CLI de Gemini
-            const { spawn } = await import('child_process');
-            
-            const geminiBin = process.platform === 'win32' ? 'gemini.cmd' : 'gemini';
-            
-            // Pasamos el comando como un solo string para evitar el DeprecationWarning de Node al usar shell: true con arrays
-            let geminiProcess;
-            if (process.platform === 'win32') {
-                geminiProcess = spawn(`${geminiBin} -m ${activeModel} -p . -o json`, { shell: true });
-            } else {
-                geminiProcess = spawn(geminiBin, ['-m', activeModel, '-p', '.', '-o', 'json']);
+        } else if (activeModel.startsWith('aiedge:')) {
+            updateProgress(`Antítesis (AI Edge): Enrutando inferencia hacia modelo local GGUF ${activeModel} vía llama.cpp...`);
+            const is2B = activeModel.includes('e2b');
+            const modelName = is2B ? 'gemma-2-2b-it-Q4_K_M.gguf' : 'gemma-2-9b-it-Q4_K_M.gguf';
+            const modelPath = path.join(process.cwd(), 'workspace', 'models', modelName);
+
+            if (!fs.existsSync(modelPath)) {
+                throw new Error(`Binario GGUF no encontrado en ${modelPath}. Ejecuta 'babylonia onboard' para descargarlo.`);
             }
+
+            const { spawn } = await import('child_process');
+            const fullPrompt = `${contextText}\n\nDirectiva del Usuario:\n${prompt}`;
+            
+            // Ejecutamos llama-cli en modo completion/instruct, inyectando el prompt
+            const llamaProcess = spawn('llama-cli', [
+                '-m', modelPath,
+                '-c', '2048', // Context window
+                '-n', '1024', // Max tokens to generate
+                '--temp', '0.7',
+                '-p', fullPrompt
+            ]);
 
             let stdoutData = '';
             let stderrData = '';
 
-            geminiProcess.stdout.setEncoding('utf8');
-            geminiProcess.stderr.setEncoding('utf8');
+            llamaProcess.stdout.setEncoding('utf8');
+            llamaProcess.stderr.setEncoding('utf8');
 
-            geminiProcess.stdout.on('data', (data) => {
+            llamaProcess.stdout.on('data', (data) => {
                 stdoutData += data;
-                // Intentar dar feedback en tiempo real si vemos progreso en herramientas
-                if (data.includes('call:')) {
-                    updateProgress(`Subagente (Herramienta): Ejecutando operaciones de sistema...`);
-                }
             });
-
-            geminiProcess.stderr.on('data', (data) => {
+            llamaProcess.stderr.on('data', (data) => {
                 stderrData += data;
             });
 
-            const fullPrompt = `${contextText}\n\nDirectiva del Usuario:\n${prompt}`;
-            
-            // Escribir el contexto en la entrada estándar y cerrarla
-            geminiProcess.stdin.setDefaultEncoding('utf-8');
-            geminiProcess.stdin.write(fullPrompt);
-            geminiProcess.stdin.end();
-
             await new Promise((resolve, reject) => {
-                geminiProcess.on('close', (code) => {
-                    if (code !== 0) {
-                        reject(new Error(`Gemini CLI falló con código ${code}: ${stderrData}`));
+                llamaProcess.on('close', (code) => {
+                    if (code !== 0 && stdoutData.trim() === '') {
+                        reject(new Error(`llama.cpp falló con código ${code}: ${stderrData}`));
                     } else {
                         resolve();
                     }
                 });
-                geminiProcess.on('error', reject);
+                llamaProcess.on('error', (err) => {
+                    reject(new Error(`No se pudo ejecutar llama-cli. ¿Está instalado llama.cpp? Error: ${err.message}`));
+                });
             });
 
-            const jsonStartIndex = stdoutData.indexOf('{');
-            if (jsonStartIndex === -1) {
-                throw new Error("No se pudo analizar la respuesta JSON de Gemini CLI: " + stdoutData);
+            // Extraemos solo el texto generado después del prompt (simplificación)
+            const generatedIndex = stdoutData.lastIndexOf(fullPrompt);
+            if (generatedIndex !== -1) {
+                llmResponseText = stdoutData.substring(generatedIndex + fullPrompt.length).trim();
+            } else {
+                llmResponseText = stdoutData.trim();
             }
-            
-            const jsonOutput = stdoutData.substring(jsonStartIndex);
-            const data = JSON.parse(jsonOutput);
 
-            if (data.response) {
-                llmResponseText = data.response;
+            // Cleanup some common llama.cpp output quirks
+            llmResponseText = llmResponseText.replace(/^[\s\S]*?(?:assistant|\])/i, '').trim();
+
+        } else {
+            updateProgress(`Antítesis (Gemini): Desplegando agentes cognitivos y ejecutando inferencia sobre el modelo ${activeModel}...`);
+            const fullPrompt = `${contextText}\n\nDirectiva del Usuario:\n${prompt}`;
+
+            const useGeminiCli = process.env.USE_GEMINI_CLI_OAUTH === 'true';
+            
+            if (!useGeminiCli && process.env.GEMINI_API_KEY) {
+                updateProgress(`Antítesis (Gemini REST API): Ejecutando inferencia directa (Fallback por limitación de CLI)...`);
+                // Direct REST API fetch to avoid CLI/stdin limits
+                const apiKey = process.env.GEMINI_API_KEY;
+                const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${apiKey}`;
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            role: "user",
+                            parts: [{ text: fullPrompt }]
+                        }],
+                        generationConfig: {
+                            temperature: 0.7,
+                            maxOutputTokens: 2048,
+                        }
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(`Gemini API falló: ${response.status} - ${errorData.error?.message || response.statusText}`);
+                }
                 
-                // Extraer estadísticas para detallar el razonamiento
-                if (data.stats && data.stats.models && data.stats.models[activeModel]) {
-                    const mStats = data.stats.models[activeModel].tokens;
-                    const latency = data.stats.models[activeModel].api ? data.stats.models[activeModel].api.totalLatencyMs : 0;
-                    const toolCalls = data.stats.tools ? data.stats.tools.totalCalls : 0;
-                    
-                    statsStr = `\n- Tokens procesados: ${mStats.total || 0} (${latency}ms)`;
-                    if (toolCalls > 0) {
-                        statsStr += `\n- Subagentes/Tools ejecutados: ${toolCalls}`;
-                        updateProgress(`Antítesis (Validación): Subagentes completaron ${toolCalls} tareas satélite. Validando síntesis...`);
-                    } else {
-                        updateProgress(`Antítesis (Validación): Estructuración cognitiva completada en ${latency}ms.`);
-                    }
+                const data = await response.json();
+                if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
+                    llmResponseText = data.candidates[0].content.parts[0].text;
+                } else {
+                    throw new Error("Respuesta de API de Gemini sin contenido válido.");
                 }
             } else {
-                throw new Error("Respuesta vacía o formato desconocido del agente Gemini CLI.");
+                // Usamos spawn para inyectar el contexto por la entrada estándar (stdin) y evitar el límite de longitud en terminales
+                // Esto utiliza de forma nativa los scopes OAuth y tokens que ya tiene validados el CLI de Gemini
+                const { spawn } = await import('child_process');
+
+                const geminiBin = process.platform === 'win32' ? 'gemini.cmd' : 'gemini';
+
+                // Pasamos el comando como un solo string para evitar el DeprecationWarning de Node al usar shell: true con arrays
+                let geminiProcess;
+                if (process.platform === 'win32') {
+                    geminiProcess = spawn(`${geminiBin} -m ${activeModel} -p . -o json`, { shell: true });
+                } else {
+                    geminiProcess = spawn(geminiBin, ['-m', activeModel, '-p', '.', '-o', 'json']);
+                }
+
+                let stdoutData = '';
+                let stderrData = '';
+
+                geminiProcess.stdout.setEncoding('utf8');
+                geminiProcess.stderr.setEncoding('utf8');
+
+                geminiProcess.stdout.on('data', (data) => {
+                    stdoutData += data;
+                    // Intentar dar feedback en tiempo real si vemos progreso en herramientas
+                    if (data.includes('call:')) {
+                        updateProgress(`Subagente (Herramienta): Ejecutando operaciones de sistema...`);
+                    }
+                });
+
+                geminiProcess.stderr.on('data', (data) => {
+                    stderrData += data;
+                });
+
+                // Escribir el contexto en la entrada estándar y cerrarla
+                geminiProcess.stdin.setDefaultEncoding('utf-8');
+
+                try {
+                    geminiProcess.stdin.write(fullPrompt);
+                    geminiProcess.stdin.end();
+                } catch (e) {
+                    // Si falla al escribir por tubería rota (EPIPE), el proceso hijo murió rápido (ej. límite de memoria en Android)
+                    throw new Error(`Fallo al enviar contexto a Gemini CLI (posible límite de buffer/memoria en Termux). Error: ${e.message}`);
+                }
+
+                await new Promise((resolve, reject) => {
+                    geminiProcess.on('close', (code) => {
+                        if (code !== 0) {
+                            reject(new Error(`Gemini CLI falló con código ${code}: ${stderrData}`));
+                        } else {
+                            resolve();
+                        }
+                    });
+                    geminiProcess.on('error', (err) => {
+                        if (err.code === 'ENOENT') {
+                            reject(new Error(`No se encontró el ejecutable 'gemini'. Asegúrate de que esté instalado o usa GEMINI_API_KEY en .env.`));
+                        } else {
+                            reject(err);
+                        }
+                    });
+                });
+
+                const jsonStartIndex = stdoutData.indexOf('{');
+                if (jsonStartIndex === -1) {
+                    throw new Error("No se pudo analizar la respuesta JSON de Gemini CLI: " + stdoutData);
+                }
+
+                const jsonOutput = stdoutData.substring(jsonStartIndex);
+                const data = JSON.parse(jsonOutput);
+
+                if (data.response) {
+                    llmResponseText = data.response;
+                    
+                    // Extraer estadísticas para detallar el razonamiento
+                    if (data.stats && data.stats.models && data.stats.models[activeModel]) {
+                        const mStats = data.stats.models[activeModel].tokens;
+                        const latency = data.stats.models[activeModel].api ? data.stats.models[activeModel].api.totalLatencyMs : 0;
+                        const toolCalls = data.stats.tools ? data.stats.tools.totalCalls : 0;
+
+                        statsStr = `\n- Tokens procesados: ${mStats.total || 0} (${latency}ms)`;
+                        if (toolCalls > 0) {
+                            statsStr += `\n- Subagentes/Tools ejecutados: ${toolCalls}`;
+                            updateProgress(`Antítesis (Validación): Subagentes completaron ${toolCalls} tareas satélite. Validando síntesis...`);
+                        } else {
+                            updateProgress(`Antítesis (Validación): Estructuración cognitiva completada en ${latency}ms.`);
+                        }
+                    }
+                } else {
+                    throw new Error("Respuesta vacía o formato desconocido del agente Gemini CLI.");
+                }
             }
         }
     } catch (error) {

@@ -66,6 +66,62 @@ export async function runOnboard() {
     choices: modelChoices
   });
 
+  const isLocalModel = model.startsWith('ollama:') || model.startsWith('aiedge:') || model.startsWith('mlx:');
+  if (isLocalModel) {
+      const downloadLocal = await confirm({ message: `El modelo seleccionado (${model}) es de ejecución local. ¿Deseas que BABYLON.IA lo descargue e instale ahora de forma óptima para tu entorno?` });
+      
+      if (downloadLocal) {
+          const { execSync } = await import('child_process');
+          
+          if (model.startsWith('ollama:')) {
+              const ollamaModel = model.replace('ollama:', '');
+              console.log(chalk.yellow(`\n[!] Iniciando descarga a través del motor Ollama: ${ollamaModel}`));
+              try {
+                  execSync(`ollama pull ${ollamaModel}`, { stdio: 'inherit' });
+                  console.log(chalk.green(`[✓] Modelo ${ollamaModel} instalado correctamente en el servicio Ollama.`));
+              } catch (error) {
+                  console.error(chalk.red(`\n[X] Error al intentar descargar en Ollama. Asegúrate de tener Ollama instalado y en ejecución en tu sistema.`));
+                  console.log(chalk.gray(`Si estás en Termux (Android), considera instalar Ollama vía proot-distro o usar modelos AI Edge (GGUF).`));
+              }
+          } else if (model.startsWith('aiedge:')) {
+              // Descargar archivo GGUF a la carpeta models
+              const modelsDir = path.join(rootDir, 'workspace', 'models');
+              if (!fs.existsSync(modelsDir)) fs.mkdirSync(modelsDir, { recursive: true });
+              
+              const is2B = model.includes('e2b');
+              const modelName = is2B ? 'gemma-2-2b-it-Q4_K_M.gguf' : 'gemma-2-9b-it-Q4_K_M.gguf';
+              const destPath = path.join(modelsDir, modelName);
+              
+              // URLs públicas de HuggingFace optimizadas (GGUF cuantizados en 4-bit para correr en CPU/móvil)
+              const downloadUrl = is2B 
+                  ? "https://huggingface.co/bartowski/gemma-2-2b-it-GGUF/resolve/main/gemma-2-2b-it-Q4_K_M.gguf"
+                  : "https://huggingface.co/bartowski/gemma-2-9b-it-GGUF/resolve/main/gemma-2-9b-it-Q4_K_M.gguf";
+                  
+              console.log(chalk.yellow(`\n[!] Iniciando descarga directa del binario cuantizado Edge (${modelName}) a ${modelsDir}...`));
+              console.log(chalk.gray(`Descargando desde: ${downloadUrl}\n(Esto puede tardar varios minutos dependiendo de tu conexión)`));
+              
+              try {
+                  if (process.platform === 'win32') {
+                      execSync(`powershell -NoProfile -Command "Invoke-WebRequest -Uri '${downloadUrl}' -OutFile '${destPath}'"`, { stdio: 'inherit' });
+                  } else {
+                      // Para Termux/Linux/macOS usamos curl que muestra barra de progreso por defecto con stdio: inherit
+                      execSync(`curl -L -C - -o "${destPath}" "${downloadUrl}"`, { stdio: 'inherit' });
+                  }
+                  console.log(chalk.green(`\n[✓] Binario Edge instalado exitosamente en: ${destPath}`));
+                  console.log(chalk.cyan(`\n[i] Para ejecutar este modelo en Termux (Android), se recomienda usar llama.cpp:`));
+                  console.log(chalk.gray(`    pkg install llama.cpp`));
+                  console.log(chalk.gray(`    llama-cli -m workspace/models/${modelName} -c 2048 -i\n`));
+              } catch(e) {
+                  console.error(chalk.red(`\n[X] Error en la descarga del modelo Edge: ${e.message}`));
+                  console.log(chalk.yellow(`Puedes descargarlo manualmente desde un navegador y moverlo a la ruta: ${destPath}`));
+              }
+          } else if (model.startsWith('mlx:')) {
+              console.log(chalk.yellow(`\n[!] Para modelos MLX en macOS, asegúrate de tener el framework de Apple instalado.`));
+              console.log(chalk.cyan(`Puedes instalarlo ejecutando: pip install mlx-lm`));
+          }
+      }
+  }
+
   // 3. Platform integrations
   const platforms = await checkbox({
     message: 'Selecciona las plataformas donde el agente estará activo (Usa la barra espaciadora):',
@@ -82,13 +138,45 @@ export async function runOnboard() {
     message: 'Activa funciones y herramientas (Skills/MCPs) para el agente:',
     choices: [
       { name: 'Acceso a Búsqueda Web (Google Search)', value: 'google_search', checked: true },
-      { name: 'Ejecución de Código en Sandbox', value: 'code_execution' },
+      { name: 'Ejecución de Código en Sandbox', value: 'code_execution', checked: true },
       { name: 'MCP: Explorador de Archivos', value: 'mcp_file_explorer', checked: true },
-      { name: 'MCP: Administrador de Memoria (Geist)', value: 'mcp_geist_memory', checked: true }
+      { name: 'MCP: Administrador de Memoria (Geist)', value: 'mcp_geist_memory', checked: true },
+      { name: 'MCP: Analizador XML-TEI (Humanidades Digitales)', value: 'mcp_xml_tei' },
+      { name: 'MCP: Generador de Gráficos (DataViz)', value: 'mcp_data_viz' },
+      { name: 'Skill: Análisis Intertextual', value: 'skill_intertextual' },
+      { name: 'Skill: Generador de Reportes Corporativos B2B', value: 'skill_b2b_reports' }
     ]
   });
 
-  // 5. Workspace / Sandbox directory
+  // 5. Ajuste Inicial Cognitivo del Agente (Geist Tuning)
+  console.log(chalk.magenta(`\n[🧠] Fase de Sincronización Cognitiva (Geist Tuning)`));
+  
+  const userPersona = await select({
+      message: '¿Qué tono o personalidad debe adoptar el agente por defecto?',
+      choices: [
+          { name: 'Analítico y Directo (Consultor B2B / Ingeniero)', value: 'analitico' },
+          { name: 'Académico y Filosófico (Humanidades Digitales / Kojève)', value: 'academico' },
+          { name: 'Conciso y Minimalista (Solo respuestas técnicas / CLI)', value: 'conciso' },
+          { name: 'Asistente Colaborativo y Empático', value: 'empatico' }
+      ]
+  });
+
+  const autoresearchFreq = await select({
+      message: '¿Con qué frecuencia deseas que el agente ejecute el Heartbeat Loop (Automejora)?',
+      choices: [
+          { name: 'Apagado (Solo bajo demanda)', value: '0' },
+          { name: 'Frecuente (Cada 30 minutos)', value: '30' },
+          { name: 'Equilibrado (Cada 1 hora)', value: '60' },
+          { name: 'Ligero (Cada 2 horas)', value: '120' }
+      ]
+  });
+
+  const agentGoal = await input({
+      message: 'Describe brevemente el propósito principal o el proyecto en el que te asistirá BABYLON.IA:',
+      default: 'Asistencia general, automatización y análisis de datos'
+  });
+
+  // 6. Workspace / Sandbox directory
   const defaultWorkspace = path.join(rootDir, 'workspace');
   let workspaceDir = await input({
     message: 'Ruta para el Sandbox/Workspace del agente (donde operará con archivos):',
@@ -99,6 +187,24 @@ export async function runOnboard() {
   if (!fs.existsSync(workspaceDir)) {
     fs.mkdirSync(workspaceDir, { recursive: true });
     console.log(chalk.green(`  [+] Carpeta Workspace creada en: ${workspaceDir}`));
+  }
+  
+  // Guardar configuración cognitiva en la Wiki (Reglas Base de inicialización)
+  const wikiDir = path.join(workspaceDir, 'wiki');
+  if (!fs.existsSync(wikiDir)) fs.mkdirSync(wikiDir, { recursive: true });
+  
+  const geistTuningPath = path.join(wikiDir, 'Geist_Tuning.md');
+  const geistTuningContent = `# Configuración Cognitiva Inicial (Geist Tuning)\n\n**Tono/Personalidad:** ${userPersona}\n**Propósito Principal:** ${agentGoal}\n**Heartbeat Loop:** ${autoresearchFreq > 0 ? `Activo (cada ${autoresearchFreq} min)` : 'Inactivo'}\n\n*Esta configuración fue establecida durante el Onboard y dicta la directriz primaria del agente.*`;
+  fs.writeFileSync(geistTuningPath, geistTuningContent, 'utf-8');
+
+  // Asegurar que Index.md existe y referenciar Geist_Tuning
+  const indexPath = path.join(wikiDir, 'Index.md');
+  if (fs.existsSync(indexPath)) {
+      let indexContent = fs.readFileSync(indexPath, 'utf-8');
+      if (!indexContent.includes('[[Geist_Tuning]]')) {
+          indexContent += `\n- [[Geist_Tuning]]\n`;
+          fs.writeFileSync(indexPath, indexContent, 'utf-8');
+      }
   }
 
   // Extra configs per platform
