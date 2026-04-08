@@ -371,8 +371,9 @@ io.on('connection', (socket) => {
 
     // Helper to validate paths and prevent Path Traversal
     function resolveAndValidatePath(basePath, relativePath) {
-        const fullPath = path.resolve(basePath, relativePath);
-        if (!fullPath.startsWith(path.resolve(basePath))) {
+        const resolvedBase = path.resolve(basePath);
+        const fullPath = path.resolve(resolvedBase, relativePath);
+        if (fullPath !== resolvedBase && !fullPath.startsWith(resolvedBase + path.sep)) {
             throw new Error('Intento de acceso a ruta no autorizada detectado.');
         }
         return fullPath;
