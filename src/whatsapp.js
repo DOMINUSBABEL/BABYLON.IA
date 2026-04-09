@@ -68,7 +68,8 @@ export function initWhatsAppClient(agentEvents = null) {
             puppeteer: {
                 args: puppeteerArgs,
                 executablePath: executablePath
-            }
+            },
+            webVersionCache: { type: 'remote', remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html' }
         });
 
         client.on('qr', (qr) => {
@@ -275,6 +276,8 @@ export function initWhatsAppClient(agentEvents = null) {
             if (agentEvents) agentEvents.emit('whatsapp_error', error.message);
         }
     });
+
+    };
 
     // Iniciar Puppeteer y el cliente
     bootClient();
