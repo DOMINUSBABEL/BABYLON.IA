@@ -538,7 +538,7 @@ io.on('connection', (socket) => {
 });
 
 // Arrancar el Servidor
-server.listen(PORT, async () => {
+server.listen(PORT, '0.0.0.0', async () => {
     console.log(chalk.cyan(`\n================================================`));
     console.log(chalk.bold.hex('#FFD700')(` BABYLON.IA Dashboard Node Activo en puerto ${PORT}`));
     console.log(chalk.cyan(`================================================\n`));
