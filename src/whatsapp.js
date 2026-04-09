@@ -157,40 +157,62 @@ export function initWhatsAppClient(agentEvents = null) {
 
         if (!isMeToMe && !isDirectToMeFromAuthorized && !isCommandInOtherChat) return;
 
-        let finalPrompt = msgText;
+        console.log(chalk.cyan(`\n[~] Tesis Recibida [WhatsApp - ${msg.from}]: ${msgText}${msg.hasMedia ? ' [CON ARCHIVO ADJUNTO]' : ''}`));
+        let naturalStatusMsg = await msg.reply('🧠 *Procesando...*');
 
-        // Manejo de Archivos Adjuntos (Media)
-        if (msg.hasMedia) {
-            try {
-                const media = await msg.downloadMedia();
-                if (media) {
-                    const mediaDir = path.join(process.cwd(), 'workspace', 'media');
-                    if (!fs.existsSync(mediaDir)) {
-                        fs.mkdirSync(mediaDir, { recursive: true });
-                    }
-                    
-                    let fileName = media.filename;
-                    if (!fileName) {
-                        let ext = '';
-                        if (media.mimetype) {
-                            const mimeType = media.mimetype.split(';')[0];
-                            if (mimeType === 'application/pdf') ext = '.pdf';
-                            else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') ext = '.docx';
-                            else if (mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') ext = '.xlsx';
-                            else if (mimeType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation') ext = '.pptx';
-                            else if (mimeType.startsWith('image/')) ext = '.' + mimeType.split('/')[1];
-                            else if (mimeType.startsWith('audio/')) ext = '.' + mimeType.split('/')[1].replace('ogg; codecs=opus', 'ogg');
-                            else if (mimeType.startsWith('video/')) ext = '.' + mimeType.split('/')[1];
-                        }
-                        fileName = `media_${Date.now()}${ext.replace(/[^a-zA-Z0-9.]/g, '')}`;
-                    }
-                    
-                    const filePath = path.join(mediaDir, fileName);
-                    fs.writeFileSync(filePath, media.data, 'base64');
-                    
-                    console.log(chalk.yellow(`\n[!] Archivo adjunto descargado y guardado en: ${filePath}`));
-                    finalPrompt = `[ATENCIÓN: El usuario ha enviado un archivo multimedia/documento. El archivo fue descargado exitosamente y se encuentra en esta ruta local exacta: ${filePath} . DEBES usar obligatoriamente tu herramienta de lectura de archivos ('read_file') para abrir, leer y analizar el contenido de este archivo antes de dar una respuesta.]\n\nDirectiva del usuario: ${finalPrompt || 'Analiza el archivo adjunto.'}`;
+        if (agentEvents) agentEvents.emit('whatsapp_command_start', msgText);
+
+        try {
+            let mediaObj = null;
+            if (msg.hasMedia) {
+                const downloadedMedia = await msg.downloadMedia();
+                if (downloadedMedia) {
+                    mediaObj = {
+                        data: downloadedMedia.data,
+                        filename: downloadedMedia.filename,
+                        mimetype: downloadedMedia.mimetype
+                    };
                 }
+            }
+
+            const gatewayEvent = {
+                text: msgText,
+                hasMedia: msg.hasMedia,
+                media: mediaObj,
+                channel: 'whatsapp',
+                author: authorClean || fromClean,
+                from: msg.from,
+                to: msg.to,
+                isCommand: msgText.startsWith('!geist')
+            };
+
+            const responseObj = await gateway.handleEvent(gatewayEvent, (progressText) => {
+                console.log(chalk.gray(`     [LLM/Geist] ${progressText}`));
+                if (agentEvents) agentEvents.emit('whatsapp_progress', progressText);
+            });
+
+            if (responseObj.type === 'file') {
+                const outMedia = MessageMedia.fromFilePath(responseObj.path);
+                await client.sendMessage(msg.from, outMedia, { caption: responseObj.caption || '*Geist File Extractor:*' });
+                console.log(chalk.green(`  -> Archivo enviado exitosamente por WhatsApp.`));
+            } else {
+                console.log(chalk.green('  -> Síntesis generada. Respondiendo.'));
+                await naturalStatusMsg.reply(responseObj.text);
+                if (agentEvents) agentEvents.emit('whatsapp_response', responseObj.text);
+            }
+        } catch (error) {
+            console.error(chalk.red(`Error en el procesamiento: ${error.message}`));
+            await naturalStatusMsg.reply(`❌ *Error cognitivo:*\nNo he podido procesar tu solicitud adecuadamente.\n_Detalle: ${error.message}_`);
+            if (agentEvents) agentEvents.emit('whatsapp_error', error.message);
+        }
+    });
+
+    };
+
+    // Iniciar Puppeteer y el cliente
+    bootClient();
+}
+  }
             } catch (err) {
                 console.error(chalk.red(`Error al procesar el archivo adjunto: ${err.message}`));
             }

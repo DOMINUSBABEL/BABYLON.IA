@@ -13,7 +13,7 @@ import { getGeminiOAuthToken } from './auth.js';
 import { initWhatsAppClient } from './whatsapp.js';
 import { initTelegramBot } from './telegram.js';
 import { initTwitterBot } from './twitter.js';
-import { processTask } from './agent_core.js';
+import { gateway } from './gateway.js';
 import dotenv from 'dotenv';
 import boxen from 'boxen';
 import logUpdate from 'log-update';
@@ -146,6 +146,22 @@ function initTerminalUI() {
 }
 
 // Configuración de WebSockets
+// Estado global para clientes nuevos
+let lastQrCode = null;
+let isWhatsappReady = false;
+
+// Mover listeners fuera de io.on('connection') para evitar memory leaks
+agentEvents.on('qr_code', (qrCodeBase64) => {
+    lastQrCode = qrCodeBase64;
+    io.emit('whatsapp_qr', qrCodeBase64);
+});
+
+agentEvents.on('whatsapp_ready', () => {
+    isWhatsappReady = true;
+    lastQrCode = null; // Ya no necesitamos el QR
+    io.emit('whatsapp_status', 'connected');
+});
+
 // Sincronizar eventos de WhatsApp hacia el Dashboard
 agentEvents.on('whatsapp_command_start', (cmd) => {
     io.emit('agent_status', 'Pensando...');
@@ -164,18 +180,18 @@ agentEvents.on('whatsapp_error', (error) => {
 
 io.on('connection', (socket) => {
     // console.log(chalk.gray('  [Dashboard] Cliente Web conectado.'));
-    
-    // Escuchar el evento de QR desde whatsapp.js y reenviarlo a la web
-    agentEvents.on('qr_code', (qrCodeBase64) => {
-        socket.emit('whatsapp_qr', qrCodeBase64);
-    });
 
-    agentEvents.on('whatsapp_ready', () => {
+    // Enviar estado inicial guardado al nuevo cliente
+    if (isWhatsappReady) {
         socket.emit('whatsapp_status', 'connected');
-    });
+    } else if (lastQrCode) {
+        socket.emit('whatsapp_qr', lastQrCode);
+    } else {
+        // Estado inicial genérico si no hay QR ni está ready
+        socket.emit('whatsapp_status', 'waiting');
+    }
 
-    // --- NUEVAS RUTAS DASHBOARD V2 ---
-    socket.on('get_config', () => {
+    // --- NUEVAS RUTAS DASHBOARD V2 ---    socket.on('get_config', () => {
         // Leemos variables de entorno actuales como fuente de verdad
         const currentConfig = {
             model: process.env.GEMINI_MODEL || 'gemini-3.1-pro-preview',
@@ -224,10 +240,23 @@ io.on('connection', (socket) => {
                 io.emit('agent_status', 'Heartbeat Loop...');
                 try {
                     let steps = [];
-                    const response = await processTask(autoPrompt, (text) => {
+
+                    const gatewayEvent = {
+                        text: autoPrompt,
+                        hasMedia: false,
+                        media: null,
+                        channel: 'heartbeat',
+                        author: 'system',
+                        from: 'internal',
+                        to: 'bot',
+                        isCommand: false
+                    };
+
+                    const responseObj = await gateway.handleEvent(gatewayEvent, (text) => {
                         steps.push(`• ${text}`);
                         io.emit('agent_progress', text);
                     });
+                    
                     console.log(chalk.green(`[♥] Ciclo de automejora completado.`));
                     io.emit('system_log', `Heartbeat completado. Revisa tu Wiki Memory para nuevas síntesis.`);
                     io.emit('agent_status', 'En espera de directivas');

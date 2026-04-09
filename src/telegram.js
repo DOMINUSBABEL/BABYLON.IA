@@ -1,6 +1,6 @@
 import { Telegraf } from 'telegraf';
 import chalk from 'chalk';
-import { processTask } from './agent_core.js';
+import { gateway } from './gateway.js';
 
 export function initTelegramBot(token) {
     if (!token) {
@@ -35,12 +35,28 @@ export function initTelegramBot(token) {
         ctx.sendChatAction('typing');
 
         try {
-            const response = await processTask(msg, (progressText) => {
+            const gatewayEvent = {
+                text: msg,
+                hasMedia: false,
+                media: null,
+                channel: 'telegram',
+                author: username || userId,
+                from: userId,
+                to: 'bot',
+                isCommand: isCommand
+            };
+
+            const responseObj = await gateway.handleEvent(gatewayEvent, (progressText) => {
                 console.log(chalk.yellow(`     [Geist Telegram] ${progressText}`));
             });
 
             console.log(chalk.green('  -> Síntesis generada (Telegram).'));
-            ctx.reply(response);
+            
+            if (responseObj.type === 'file') {
+                 await ctx.replyWithDocument({ source: responseObj.path }, { caption: responseObj.caption });
+            } else if (responseObj.type === 'error' || responseObj.type === 'text') {
+                 await ctx.reply(responseObj.text);
+            }
         } catch (error) {
             console.error(chalk.red(`[Error Procesando Tarea en Telegram]: ${error.message}`));
             ctx.reply('Se ha producido una anomalía procesando tu solicitud.');

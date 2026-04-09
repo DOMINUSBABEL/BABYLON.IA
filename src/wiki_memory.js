@@ -138,27 +138,12 @@ export class WikiMemory {
         }
 
         // 4. Asimilar automáticamente todos los geist.md, subgeist.md y otros archivos clave del workspace
-        const workspacePath = path.resolve(this.wikiDir, '..');
-        const workspaceFiles = this.exploreWorkspace(workspacePath);
+        const ignoredPaths = [
+            path.join('wiki', 'Index.md'),
+            ...links.map(l => path.join('wiki', `${l}.md`))
+        ];
 
-        contextText += "--- ASIMILACIÓN AUTOMÁTICA DEL WORKSPACE ---\n";
-        for (const file of workspaceFiles) {
-            const fileName = path.basename(file);
-            const relativePath = path.relative(workspacePath, file);
-
-            // Ignorar los de la wiki base que ya asimilamos y archivos muy genéricos a menos que sean geist
-            if (file.includes(path.join('wiki', 'Index.md')) || links.some(l => file.includes(path.join('wiki', `${l}.md`)))) {
-                continue;
-            }
-
-            // Priorizar archivos que contengan "geist", "agent", o si el usuario subió nuevos ".md" o ".json"
-            if (fileName.toLowerCase().includes('geist') || fileName.toLowerCase().includes('agent') || fileName.endsWith('.md')) {
-                 const content = fs.readFileSync(file, 'utf-8') || '';
-                 // Limitamos el tamaño por archivo para no saturar el contexto si suben algo inmenso,
-                 // asimilamos los primeros 1000 caracteres de cada nuevo conocimiento.
-                 contextText += `[${relativePath}]:\n${content.substring(0, 1000)}\n\n`;
-            }
-        }
+        contextText += documentManager.getContextData(ignoredPaths);
 
         contextText += "----------------------------\n";
         return contextText;

@@ -2,7 +2,8 @@ import chalk from 'chalk';
 import fs from 'fs';
 import path from 'path';
 import { WikiMemory } from './wiki_memory.js';
-import { TEIParser } from './tei_parser.js';
+import { pluginManager } from './plugins/PluginManager.js';
+import { templateEngine } from './template_engine.js';
 import { exec } from 'child_process';
 import util from 'util';
 import { GoogleGenAI } from '@google/genai';
@@ -10,7 +11,6 @@ import { GoogleGenAI } from '@google/genai';
 const execPromise = util.promisify(exec);
 
 let wikiMemoryInstance = null;
-let teiParserInstance = null;
 
 function getWikiMemory() {
     if (!wikiMemoryInstance) {
@@ -26,7 +26,6 @@ function getWikiMemory() {
  */
 export async function processTask(prompt, updateProgress) {
     const memory = getWikiMemory();
-    if (!teiParserInstance) teiParserInstance = new TEIParser();
 
     // Fase 1: TESIS (Asimilación)
     const promptPreview = prompt.length > 30 ? prompt.substring(0, 30) + '...' : prompt;
@@ -43,8 +42,10 @@ export async function processTask(prompt, updateProgress) {
         const resolvedPath = path.resolve(process.cwd(), potentialXmlPath);
         if (fs.existsSync(resolvedPath)) {
             updateProgress(`Antítesis (Humanidades Digitales): Detectado corpus XML-TEI. Parseando documento y extrayendo metadatos/entidades...`);
-            const teiReport = teiParserInstance.generateAnalysisReport(resolvedPath);
-            contextText += `\n\n--- REPORTE XML-TEI EXTRAÍDO AUTOMÁTICAMENTE ---\n${teiReport}\n------------------------------------------------\n`;
+            const teiReport = await pluginManager.processFile(resolvedPath);
+            if (teiReport) {
+                contextText += `\n\n--- REPORTE XML-TEI EXTRAÍDO AUTOMÁTICAMENTE ---\n${teiReport}\n------------------------------------------------\n`;
+            }
         } else {
              updateProgress(`Antítesis (Humanidades Digitales): Se mencionó el archivo ${potentialXmlPath} pero no se encontró en disco. Se procederá con análisis teórico.`);
         }
@@ -272,7 +273,10 @@ export async function processTask(prompt, updateProgress) {
     // Fase 3: SÍNTESIS (Resultado)
     updateProgress("Síntesis (Conclusión): Empaquetando resultado final, indexando aprendizajes y ejecutando Heartbeat de Memoria en disco.");
     
-    const result = `${llmResponseText}\n\n` +
+    // Aplicar motor de plantillas a la respuesta del LLM (ej. actas o documentos formales)
+    const formattedResponse = templateEngine.applyRuthCompliantStyles(llmResponseText);
+
+    const result = `${formattedResponse}\n\n` +
                    `*🧠 Estado del Sistema (Geist):*\n` +
                    `- Motor Gemini CLI: Activo y Enlazado\n` +
                    `- Modelo Activo: ${activeModel}${statsStr}\n` +
