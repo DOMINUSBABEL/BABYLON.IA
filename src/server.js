@@ -191,7 +191,8 @@ io.on('connection', (socket) => {
         socket.emit('whatsapp_status', 'waiting');
     }
 
-    // --- NUEVAS RUTAS DASHBOARD V2 ---    socket.on('get_config', () => {
+    // --- NUEVAS RUTAS DASHBOARD V2 ---
+    socket.on('get_config', () => {
         // Leemos variables de entorno actuales como fuente de verdad
         const currentConfig = {
             model: process.env.GEMINI_MODEL || 'gemini-3.1-pro-preview',
