@@ -218,6 +218,19 @@ export async function runOnboard() {
       twitterBearer = await input({ message: 'Introduce el Bearer Token de la API de X (Twitter):' });
   }
 
+  if (platforms.includes('whatsapp')) {
+      console.log(chalk.magenta(`\n[📱] Configuración de WhatsApp Web`));
+      const linkWa = await confirm({ message: '¿Deseas enlazar tu cuenta de WhatsApp ahora escaneando el código QR (Recomendado)?' });
+      if (linkWa) {
+          try {
+              const { pairWhatsAppClient } = await import('./whatsapp.js');
+              await pairWhatsAppClient();
+          } catch (e) {
+              console.log(chalk.yellow('\n[!] No se pudo enlazar WhatsApp en este momento. El sistema volverá a intentarlo cuando inicies "babylonia gateway".'));
+          }
+      }
+  }
+
   // Save to .env
   const envPath = path.join(rootDir, '.env');
   const envContent = `
