@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import chalk from 'chalk';
+import { documentManager } from './document_manager.js';
 
 /**
  * Gestor de Memoria Wiki (Basada en Disco).

@@ -14,6 +14,7 @@ import { initWhatsAppClient } from './whatsapp.js';
 import { initTelegramBot } from './telegram.js';
 import { initTwitterBot } from './twitter.js';
 import { gateway } from './gateway.js';
+import { processTask } from './agent_core.js';
 import dotenv from 'dotenv';
 import boxen from 'boxen';
 import logUpdate from 'log-update';
