@@ -192,8 +192,13 @@ io.on('connection', (socket) => {
         // En un entorno de producción real, esto debería guardar en un archivo .env
         // Por ahora, actualizamos process.env dinámicamente para la sesión actual
         if (newConfig.model) {
-            process.env.GEMINI_MODEL = newConfig.model;
-            console.log(chalk.yellow(`[Config] Motor de Inferencia cambiado a: ${newConfig.model}`));
+            // Validación de seguridad para evitar inyección de comandos
+            if (!/^[a-zA-Z0-9.\-:]+$/.test(newConfig.model)) {
+                console.error(chalk.red(`[Error] Intento de inyección detectado en modelo: ${newConfig.model}`));
+            } else {
+                process.env.GEMINI_MODEL = newConfig.model;
+                console.log(chalk.yellow(`[Config] Motor de Inferencia cambiado a: ${newConfig.model}`));
+            }
         }
 
         let platforms = ['web']; // Web siempre activo para el dashboard
@@ -371,8 +376,9 @@ io.on('connection', (socket) => {
 
     // Helper to validate paths and prevent Path Traversal
     function resolveAndValidatePath(basePath, relativePath) {
-        const fullPath = path.resolve(basePath, relativePath);
-        if (!fullPath.startsWith(path.resolve(basePath))) {
+        const resolvedBase = path.resolve(basePath);
+        const fullPath = path.resolve(resolvedBase, relativePath);
+        if (fullPath !== resolvedBase && !fullPath.startsWith(resolvedBase + path.sep)) {
             throw new Error('Intento de acceso a ruta no autorizada detectado.');
         }
         return fullPath;
