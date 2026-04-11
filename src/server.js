@@ -42,6 +42,12 @@ const originalError = console.error;
 // Creamos un event emitter global para comunicarnos con WhatsApp
 export const agentEvents = new events.EventEmitter();
 
+// --- INICIALIZACIÓN DE WEBHOOKS (Antes de express.json) ---
+const activePlatforms = (process.env.ENABLED_PLATFORMS || 'whatsapp,web').split(',');
+if (activePlatforms.includes('github')) {
+    initGithubClient(app, agentEvents);
+}
+
 // TUI / Readline instanciación (definido luego, pero se necesita para el prompt padding)
 let rlInterface = null;
 
