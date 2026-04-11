@@ -4,13 +4,7 @@ const { Client, LocalAuth, MessageMedia } = pkg;
 import chalk from 'chalk';
 import fs from 'fs';
 import path from 'path';
-// Assuming processTask handles direct queries
-import { processTask } from './agent_core.js';
-
-// Configuración de Seguridad: Lista Blanca de Números Autorizados
-const AUTHORIZED_NUMBERS = [
-    // 'tu_numero@c.us'
-];
+import { gateway } from './gateway.js';
 
 export function initWhatsAppClient(agentEvents = null) {
     console.log(chalk.cyan('Inicializando el navegador Headless de WhatsApp Web (puede tomar unos segundos)...'));
@@ -134,91 +128,64 @@ export function initWhatsAppClient(agentEvents = null) {
             const toClean = msg.to ? msg.to.replace(/:[0-9]+/, '') : '';
             const authorClean = msg.author ? msg.author.replace(/:[0-9]+/, '') : '';
 
-            const isMeToMe = (fromClean === myId && toClean === myId);
-            const isDirectToMeFromAuthorized = toClean === myId && AUTHORIZED_NUMBERS.includes(fromClean) && !msg.fromMe;
-            const isCommandInOtherChat = msgText.startsWith('!geist') && (msg.fromMe || AUTHORIZED_NUMBERS.includes(fromClean) || (authorClean && AUTHORIZED_NUMBERS.includes(authorClean)));
+            const eventData = {
+                text: msgText,
+                hasMedia: msg.hasMedia,
+                media: null,
+                channel: 'whatsapp',
+                author: authorClean,
+                from: fromClean,
+                to: toClean,
+                isCommand: msgText.toLowerCase().startsWith('!geist'),
+                isFromMe: msg.fromMe,
+                myId: myId
+            };
 
-            if (!isMeToMe && !isDirectToMeFromAuthorized && !isCommandInOtherChat) return;
-
-            let mediaObj = null;
-            let finalPrompt = msgText;
+            // Implementación de Homologación de Autorización a través del Gateway
+            if (!gateway.isAuthorized(eventData)) {
+                return; // Descartar silenciosamente comandos/mensajes no autorizados
+            }
 
             try {
                 if (msg.hasMedia) {
                     const downloadedMedia = await msg.downloadMedia();
                     if (downloadedMedia) {
-                        mediaObj = {
+                        eventData.media = {
                             data: downloadedMedia.data,
                             filename: downloadedMedia.filename,
                             mimetype: downloadedMedia.mimetype
                         };
-                        finalPrompt += `\n[Archivo Adjunto detectado: ${downloadedMedia.filename} (${downloadedMedia.mimetype})]`;
                     }
                 }
             } catch (err) {
-                console.error(chalk.red(`Error procesando adjunto: ${err.message}`));
+                console.error(chalk.red(`Error descargando adjunto: ${err.message}`));
             }
 
-            if (msgText.startsWith('!geist')) {
-                console.log(chalk.magenta(`\n[+] Comando Recibido [${msg.from}]: ${msgText}`));
-                const commandStr = msgText.replace('!geist', '').trim();
-                
-                if (!commandStr && !msg.hasMedia) {
-                     await msg.reply('⚠️ *Sintaxis Inválida:*\nEjemplos:\n- `!geist status`\n- `!geist enviar <ruta>`');
-                     return;
-                }
-
-                if (commandStr.toLowerCase() === 'status') {
-                    await msg.reply('🟢 *BABYLON.IA Status:*\n- Motor: ONLINE\n- Bucle Dialéctico: Operativo.');
-                    return;
-                }
-
-                if (commandStr.toLowerCase().startsWith('enviar ')) {
-                    const cleanPath = commandStr.replace(/enviar /i, '').trim().replace(/^"|"$/g, '');
-                    if (fs.existsSync(cleanPath)) {
-                        try {
-                            const outMedia = MessageMedia.fromFilePath(cleanPath);
-                            await client.sendMessage(msg.from, outMedia, { caption: `*Geist File Extractor:*` });
-                        } catch (err) {
-                            await msg.reply(`❌ *Error del Sistema:*\n${err.message}`);
-                        }
-                    } else {
-                        await msg.reply(`❌ *Archivo no existe:* _${cleanPath}_`);
-                    }
-                    return;
-                }
-
-                let statusMsg = await msg.reply('⏳ *Iniciando Bucle Dialéctico Forzado...*');
-                if (agentEvents) agentEvents.emit('whatsapp_command_start', commandStr);
-
-                try {
-                    const response = await processTask(finalPrompt.replace('!geist', '').trim(), (progressText) => {
-                        console.log(chalk.yellow(`     [Geist] ${progressText}`));
-                        if (agentEvents) agentEvents.emit('whatsapp_progress', progressText);
-                    });
-                    await statusMsg.reply(`*BABYLON.IA (System)*:\n${response}`);
-                    if (agentEvents) agentEvents.emit('whatsapp_response', response);
-                } catch (error) {
-                    await statusMsg.reply(`❌ *Error:* ${error.message}`);
-                }
-                return;
-            }
-
-            console.log(chalk.cyan(`\n[~] Tesis Natural Recibida [${msg.from}]: ${msgText}`));
-            let naturalStatusMsg = await msg.reply('🧠 *Procesando...*');
+            let statusMsg = await msg.reply(eventData.isCommand ? '⏳ *Iniciando Bucle Dialéctico Forzado...*' : '🧠 *Procesando...*');
             if (agentEvents) agentEvents.emit('whatsapp_command_start', msgText);
 
             try {
-                // If the system expects gateway.handleEvent instead of processTask
-                // but processTask is the imported one based on previous logic.
-                const response = await processTask(finalPrompt, (progressText) => {
-                    console.log(chalk.gray(`     [LLM/Geist] ${progressText}`));
+                const responseObj = await gateway.handleEvent(eventData, (progressText) => {
+                    console.log(chalk.gray(`     [Geist] ${progressText}`));
                     if (agentEvents) agentEvents.emit('whatsapp_progress', progressText);
                 });
-                await naturalStatusMsg.reply(response);
-                if (agentEvents) agentEvents.emit('whatsapp_response', response);
+
+                if (responseObj.type === 'file' && responseObj.path) {
+                    try {
+                        const outMedia = MessageMedia.fromFilePath(responseObj.path);
+                        await client.sendMessage(msg.from, outMedia, { caption: responseObj.caption });
+                        if (agentEvents) agentEvents.emit('whatsapp_response', 'Archivo enviado');
+                    } catch (err) {
+                        await statusMsg.reply(`❌ *Error del Sistema:*\n${err.message}`);
+                        if (agentEvents) agentEvents.emit('whatsapp_error', err.message);
+                    }
+                } else if (responseObj.text) {
+                    await statusMsg.reply((eventData.isCommand ? '*BABYLON.IA (System)*:\n' : '') + responseObj.text);
+                    if (agentEvents) agentEvents.emit('whatsapp_response', responseObj.text);
+                }
+
             } catch (error) {
-                await naturalStatusMsg.reply(`❌ *Error cognitivo:*\n_Detalle: ${error.message}_`);
+                await statusMsg.reply(`❌ *Error cognitivo:*\n_Detalle: ${error.message}_`);
                 if (agentEvents) agentEvents.emit('whatsapp_error', error.message);
             }
         });

@@ -11,18 +11,16 @@ export function initTelegramBot(token) {
     console.log(chalk.cyan('Inicializando Bot de Telegram...'));
     const bot = new Telegraf(token);
 
+    let botUsername = 'telegram_bot';
+    bot.telegram.getMe().then((me) => botUsername = me.username).catch(() => {});
+
     bot.start((ctx) => {
         ctx.reply('Hola, soy BABYLON.IA. ¿En qué te puedo ayudar?');
     });
 
-    const AUTHORIZED_TELEGRAM_USERS = process.env.AUTHORIZED_TELEGRAM_USERS ? process.env.AUTHORIZED_TELEGRAM_USERS.split(',').map(n => n.trim()) : [];
-
     bot.on('text', async (ctx) => {
         const userId = ctx.from.id.toString();
         const username = ctx.from.username ? ctx.from.username : '';
-        const isAuthorized = AUTHORIZED_TELEGRAM_USERS.length === 0 || AUTHORIZED_TELEGRAM_USERS.includes(userId) || AUTHORIZED_TELEGRAM_USERS.includes(username);
-
-        if (!isAuthorized) return;
 
         const isPrivate = ctx.chat.type === 'private';
         const isCommand = ctx.message.text && ctx.message.text.startsWith('!geist');
@@ -41,14 +39,21 @@ export function initTelegramBot(token) {
                 media: null,
                 channel: 'telegram',
                 author: username || userId,
-                from: userId,
-                to: 'bot',
-                isCommand: isCommand
+                from: username || userId,
+                to: botUsername,
+                myId: botUsername,
+                isCommand: isCommand,
+                isFromMe: false
             };
 
             const responseObj = await gateway.handleEvent(gatewayEvent, (progressText) => {
                 console.log(chalk.yellow(`     [Geist Telegram] ${progressText}`));
             });
+
+            if (responseObj.type === 'error' && responseObj.text === '⚠️ No autorizado.') {
+                // Silencioso o un simple return para no spamear
+                return;
+            }
 
             console.log(chalk.green('  -> Síntesis generada (Telegram).'));
             
