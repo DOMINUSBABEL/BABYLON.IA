@@ -11,17 +11,41 @@ import { pluginManager } from './plugins/PluginManager.js';
  */
 class Gateway {
     constructor() {
-        this.AUTHORIZED_NUMBERS = [
-            // 'tu_numero@c.us'
-        ];
+        this.AUTHORIZED_NUMBERS = process.env.AUTHORIZED_NUMBERS ? process.env.AUTHORIZED_NUMBERS.split(',') : [];
+    }
+
+    /**
+     * Valida si un evento proveniente de cualquier canal está autorizado para interactuar con el agente.
+     * Implementa la Primera Ley (Preservación del Host) homologada.
+     */
+    isAuthorized(event) {
+        // Eventos internos, Dashboard o terminal asumen autorización por defecto si no envían 'from'
+        if (!event.from || event.from === 'internal' || event.from === 'dashboard') return true;
+
+        const myId = event.myId || '';
+        const fromClean = event.from || '';
+        const toClean = event.to || '';
+        const authorClean = event.author || '';
+        const isFromMe = event.isFromMe || false;
+
+        const isMeToMe = (fromClean === myId && toClean === myId);
+        const isDirectToMeFromAuthorized = toClean === myId && this.AUTHORIZED_NUMBERS.includes(fromClean) && !isFromMe;
+        const isCommandInOtherChat = event.isCommand && (isFromMe || this.AUTHORIZED_NUMBERS.includes(fromClean) || (authorClean && this.AUTHORIZED_NUMBERS.includes(authorClean)));
+
+        return isMeToMe || isDirectToMeFromAuthorized || isCommandInOtherChat;
     }
 
     /**
      * Procesa un evento unificado proveniente de cualquier canal.
-     * @param {Object} event { text, hasMedia, media, channel, author, from, to, isCommand, isAuthorized }
+     * @param {Object} event { text, hasMedia, media, channel, author, from, to, isCommand, isFromMe, myId }
      * @param {Function} updateProgress Callback para el progreso
      */
     async handleEvent(event, updateProgress) {
+        if (!this.isAuthorized(event)) {
+            console.log(chalk.red(`[Gateway] Evento bloqueado (No Autorizado) desde: ${event.from}`));
+            return { type: 'error', text: '⚠️ No autorizado.' };
+        }
+
         let finalPrompt = event.text || '';
 
         // Descarga y formateo de Media (Común para todos los canales si proveen el objeto media)

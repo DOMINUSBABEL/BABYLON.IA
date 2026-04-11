@@ -242,7 +242,7 @@ io.on('connection', (socket) => {
             socket.emit('system_log', `Heartbeat/Autoresearch Loop activado: Ejecutándose cada ${intervalMins} minutos.`);
             
             heartbeatIntervalId = setInterval(async () => {
-                const autoPrompt = "Heartbeat Loop: Revisa tu subgeist_automejora.md interno. Analiza el historial reciente de operaciones, detecta cuellos de botella e infiere una optimización arquitectónica o crea un pull request conceptual de mejora.";
+                const autoPrompt = "Heartbeat Loop: Revisa tu subgeist_automejora.md interno. Analiza el historial reciente de operaciones, detecta cuellos de botella e infiere una optimización arquitectónica o crea un pull request conceptual de mejora. IMPORTANTE (Restricción Conservadora): Si la evaluación no revela un conocimiento técnico universalizable o una optimización vital y probada empíricamente, responde EXACTAMENTE con la constante NO_UPDATE.";
                 console.log(chalk.red(`\n[♥] Iniciando ciclo de automejora Geist (Heartbeat)...`));
                 io.emit('agent_status', 'Heartbeat Loop...');
                 try {
