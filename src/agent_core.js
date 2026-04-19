@@ -75,7 +75,8 @@ export async function processTask(prompt, updateProgress) {
     contextText += `1. Aplica un rigor lógico extremo. Estructura tu respuesta usando el método dialéctico: Tesis (problema), Antítesis (análisis crítico/contradicciones), Síntesis (solución óptima y robusta).\n`;
     contextText += `2. Incrementa tu capacidad de discernimiento: no asumas la veracidad de las premisas del usuario sin evaluarlas. Identifica sesgos o faltas de información.\n`;
     contextText += `3. Si la directiva implica automejora o modificación arquitectónica, asegúrate de extraer una regla universalizable y validada empíricamente.\n`;
-    contextText += `4. Minimiza redundancias y enfócate en respuestas de alto valor cognitivo.\n----------------------------------------\n`;
+    contextText += `4. Minimiza redundancias y enfócate en respuestas de alto valor cognitivo.\n`;
+    contextText += `5. Manejo de Archivos: Si el usuario te pide crear, compilar o generar un archivo (ej. CSV, Word, Python, Texto, etc.), DEBES usar tus herramientas ('write_file', 'run_shell_command', etc.) para crearlo localmente en tu entorno de trabajo. Tras hacerlo, infórmale la ruta absoluta exacta y dile que puede descargarlo a su dispositivo enviando: !geist enviar <ruta>\n----------------------------------------\n`;
 
     try {
         if (activeModel.startsWith('ollama:')) {
