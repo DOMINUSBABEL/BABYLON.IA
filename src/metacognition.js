@@ -18,14 +18,22 @@ export class MetacognitiveLoop {
         console.log('🧠 [Metacognición] Iniciando síntesis dialéctica...');
         try {
             const rawLog = await fs.readFile(this.currentLogFile, 'utf-8').catch(() => null);
-            
+
             if (!rawLog || rawLog.length < 500) {
                 console.log('⏳ [Metacognición] Masa crítica insuficiente para síntesis.');
                 return;
             }
 
-            const prompt = `Analiza este registro de interacciones. Aplica la Síntesis de Hegel: identifica qué resoluciones fueron efectivas y extrae un principio de optimización universalizable para tus futuras interacciones. Genera solo la regla final en formato Markdown. Si la evaluación no revela un conocimiento técnico universalizable o la optimización no es vital y probada empíricamente, responde EXACTAMENTE con la constante NO_UPDATE.\n\n${rawLog}`;
-            
+            const prompt = `Analiza este registro de interacciones. Aplica la Síntesis de Hegel: identifica qué resoluciones fueron efectivas y extrae un principio de optimización arquitectónica o cognitiva universalizable para tus futuras interacciones.
+Aplica la Psicohistoria (Asimov): ¿Cómo afecta este patrón a largo plazo a la base de conocimiento y la experiencia del usuario?
+Genera solo la regla final en formato Markdown, bajo los siguientes criterios:
+1. Universalidad: La regla debe aplicar a futuros casos similares.
+2. Rigor Lógico: Debe ser inequívoca y mejorar el discernimiento del sistema.
+3. Restricción Conservadora: Si la evaluación no revela un conocimiento técnico universalizable o la optimización no es vital y probada empíricamente, responde EXACTAMENTE con la constante NO_UPDATE.
+
+Registro:
+${rawLog}`;
+
             const synthesis = await processTask(prompt, () => {});
 
             // Archivar tesis procesada primero para no acumular indefinidamente
@@ -33,14 +41,14 @@ export class MetacognitiveLoop {
             await fs.rename(this.currentLogFile, path.join(this.memoryPath, `archive/thesis_${Date.now()}.md`)).catch(() => {});
 
             if (synthesis && synthesis.includes('NO_UPDATE')) {
-                console.log('🛡️ [Metacognición] Restricción Conservadora activa: Conocimiento efímero o redundante (NO_UPDATE). Se omite actualización del archivo de sínteis.');
+                console.log('🛡️ [Metacognición] Restricción Conservadora activa: Conocimiento efímero o redundante (NO_UPDATE). Se omite actualización del archivo de síntesis.');
                 return;
             }
 
             const timestamp = new Date().toISOString();
             await fs.appendFile(this.synthesisFile, `\n## Síntesis - ${timestamp}\n${synthesis}\n`);
-            
-            console.log('✨ [Metacognición] Memoria Wiki actualizada exitosamente con nuevo conocimiento universalizable.');
+
+            console.log('✨ [Metacognición] Memoria Wiki actualizada exitosamente con nuevo conocimiento universalizable (Psicohistoria aplicada).');
         } catch (error) {
             console.error('❌ [Metacognición] Error en el ciclo:', error);
         }
