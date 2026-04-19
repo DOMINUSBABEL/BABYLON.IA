@@ -189,10 +189,16 @@ export async function processTask(prompt, updateProgress) {
 
                 const geminiBin = process.platform === 'win32' ? 'gemini.cmd' : 'gemini';
 
-                // Pasamos el comando como un solo string para evitar el DeprecationWarning de Node al usar shell: true con arrays
+                // Validación de seguridad estricta para prevenir inyección de comandos OS
+                if (!/^[a-zA-Z0-9.\-:]+$/.test(activeModel)) {
+                    throw new Error(`[Seguridad] El modelo activo contiene caracteres inválidos: ${activeModel}`);
+                }
+
+                // Ejecutamos pasándolo como string o array (shell: true no escapa los arrays de forma segura,
+                // la seguridad recae en la validación previa).
                 let geminiProcess;
                 if (process.platform === 'win32') {
-                    geminiProcess = spawn(`${geminiBin} -m ${activeModel} -p . -o json`, { shell: true });
+                    geminiProcess = spawn(geminiBin, ['-m', activeModel, '-p', '.', '-o', 'json'], { shell: true });
                 } else {
                     geminiProcess = spawn(geminiBin, ['-m', activeModel, '-p', '.', '-o', 'json']);
                 }
