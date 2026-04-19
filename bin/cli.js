@@ -20,6 +20,9 @@ import CFonts from 'cfonts';
 import chalk from 'chalk';
 import gradient from 'gradient-string';
 
+import ora from 'ora';
+import boxen from 'boxen';
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function showBanner() {
@@ -121,15 +124,31 @@ async function showBanner() {
     }
     console.log('\n');
 
-    // Simular inicializaciÃ³n de mÃ³dulos neuronales
-    const modules = ['NÃºcleo Base', 'Motor de Memoria', 'DialÃ©ctica Hegelian', 'Puente OAuth', 'Enlace Multi-Canal'];
+    // Inicialización profesional de módulos con ora
+    const modules = ['NÃºcleo Base (Zero-RAM)', 'Motor de Memoria', 'DialÃ©ctica Hegelian', 'Puente OAuth/GGUF', 'Enlace Multi-Canal (Gateway)'];
+    
     for (const mod of modules) {
-        process.stdout.write(chalk.gray(`[+] Cargando mÃ³dulo ${mod}... `));
-        await sleep(200);
-        console.log(chalk.green('OK'));
+        const spinner = ora({
+            text: chalk.gray(`Sincronizando capa: ${mod}...`),
+            spinner: 'dots'
+        }).start();
+        
+        await sleep(250 + Math.random() * 200);
+        spinner.succeed(chalk.green(`Capa enlazada: ${chalk.white.bold(mod)}`));
     }
 
-    console.log(chalk.hex('#00ffff').bold('\n[+] SincronizaciÃ³n Geist Completada. Iniciando secuencia...\n'));
+    const readinessBox = boxen(
+        chalk.hex('#00ffff').bold('Sincronización Geist Completada.\n') +
+        chalk.gray('El tejido cognitivo está preparado para procesar directivas.'),
+        {
+            padding: 1,
+            margin: { top: 1, bottom: 1 },
+            borderStyle: 'double',
+            borderColor: 'cyan',
+            align: 'center'
+        }
+    );
+    console.log(readinessBox);
     await sleep(400);
 }
 
