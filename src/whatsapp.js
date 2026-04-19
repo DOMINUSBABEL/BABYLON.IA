@@ -126,10 +126,10 @@ export function initWhatsAppClient(agentEvents = null) {
             const msgText = msg.body ? msg.body.trim() : '';
             const botSignatures = ['🧠', '⏳', '🟢', '⚠️', '❌', '*BABYLON.IA', '*Geist', 'He procesado', 'Procesando...', '*[Directiva'];
             if (botSignatures.some(sig => msgText.startsWith(sig)) || msgText.includes('Estado del Sistema (Geist)')) {
-                return;
+                return; // Evitar loops infinitos
             }
 
-            const myId = client.info.wid._serialized.replace(/:[0-9]+/, '');
+            const myId = client.info && client.info.wid ? client.info.wid._serialized.replace(/:[0-9]+/, '') : '';
             const fromClean = msg.from ? msg.from.replace(/:[0-9]+/, '') : '';
             const toClean = msg.to ? msg.to.replace(/:[0-9]+/, '') : '';
             const authorClean = msg.author ? msg.author.replace(/:[0-9]+/, '') : '';
@@ -167,7 +167,14 @@ export function initWhatsAppClient(agentEvents = null) {
                 console.error(chalk.red(`Error descargando adjunto: ${err.message}`));
             }
 
-            let statusMsg = await msg.reply(eventData.isCommand ? '⏳ *Iniciando Bucle Dialéctico Forzado...*' : '🧠 *Procesando...*');
+            let statusMsg;
+            try {
+                statusMsg = await msg.reply(eventData.isCommand ? '⏳ *Iniciando Bucle Dialéctico Forzado...*' : '🧠 *Procesando...*');
+            } catch (replyErr) {
+                console.error(chalk.red(`Error respondiendo al chat preliminar: ${replyErr.message}`));
+                return; // Si no podemos ni siquiera enviar el primer estado, abortamos la tarea
+            }
+            
             if (agentEvents) agentEvents.emit('whatsapp_command_start', msgText);
 
             try {
@@ -196,7 +203,9 @@ export function initWhatsAppClient(agentEvents = null) {
             }
         });
 
-        client.initialize();
+        client.initialize().catch(err => {
+             console.error(chalk.red(`❌ Error crítico en inicialización de Puppeteer: ${err.message}`));
+        });
     };
 
     bootClient();
