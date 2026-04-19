@@ -54,7 +54,8 @@ export function initWhatsAppClient(agentEvents = null) {
             authStrategy: new LocalAuth({ dataPath: './.wwebjs_auth' }),
             puppeteer: {
                 args: puppeteerArgs,
-                executablePath: executablePath
+                executablePath: executablePath,
+                timeout: 60000 // Aumentar timeout para conexiones lentas
             },
             // Fix WPP: Use specific remote html to prevent update loops or version crash
             webVersionCache: { type: 'remote', remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html' }
@@ -78,7 +79,7 @@ export function initWhatsAppClient(agentEvents = null) {
         });
 
         client.on('ready', () => {
-            console.log(chalk.greenBright.bold('\n✅ BABYLON.IA Conectado exitosamente a WhatsApp.'));
+            console.log(chalk.greenBright.bold('\n✅ BABYLON.IA Conectado exitosamente a WhatsApp. Enlace estabilizado.'));
             console.log(chalk.yellow('\nComandos disponibles vía chat:'));
             console.log(chalk.gray('  - !geist <tu directiva>   : Inicia el bucle de razonamiento y automejora.'));
             console.log(chalk.gray('  - !geist status          : Reporte de salud del motor OpenClaw y Gemini.'));
@@ -88,6 +89,7 @@ export function initWhatsAppClient(agentEvents = null) {
             if (agentEvents) {
                 agentEvents.emit('whatsapp_ready');
 
+                agentEvents.removeAllListeners('broadcast_whatsapp'); // Prevenir fugas de memoria en reconexiones
                 agentEvents.on('broadcast_whatsapp', async (text) => {
                     try {
                         const myId = client.info.wid._serialized.replace(/:[0-9]+/, '');
@@ -99,6 +101,10 @@ export function initWhatsAppClient(agentEvents = null) {
             }
         });
 
+        client.on('change_state', state => {
+            console.log(chalk.yellow(`[Gateway] Cambio de estado de conexión WPP: ${state}`));
+        });
+
         client.on('disconnected', (reason) => {
             console.warn(chalk.yellow('⚠️ [Gateway] Ruptura del enlace. Motivo:'), reason);
             if (reconnectAttempts < maxAttempts) {
@@ -106,7 +112,7 @@ export function initWhatsAppClient(agentEvents = null) {
                 const delay = 5000 * Math.pow(2, reconnectAttempts);
                 console.log(chalk.cyan(`🔄 Secuencia de auto-curación en ${delay/1000}s... (Intento ${reconnectAttempts})`));
                 setTimeout(async () => {
-                    try { await client.destroy(); } catch (e) {}
+                    try { await client.destroy(); } catch (e) { console.error("Error al destruir cliente previo:", e.message); }
                     bootClient();
                 }, delay);
             } else {
