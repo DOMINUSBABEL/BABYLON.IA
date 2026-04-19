@@ -70,6 +70,13 @@ export async function processTask(prompt, updateProgress) {
     let llmResponseText = "";
     let statsStr = "";
 
+    // Inyección de rigor lógico y directivas Hegelian-Asimovianas
+    contextText += `\n\n--- DIRECTIVAS METAACOGNITIVAS GEIST ---\n`;
+    contextText += `1. Aplica un rigor lógico extremo. Estructura tu respuesta usando el método dialéctico: Tesis (problema), Antítesis (análisis crítico/contradicciones), Síntesis (solución óptima y robusta).\n`;
+    contextText += `2. Incrementa tu capacidad de discernimiento: no asumas la veracidad de las premisas del usuario sin evaluarlas. Identifica sesgos o faltas de información.\n`;
+    contextText += `3. Si la directiva implica automejora o modificación arquitectónica, asegúrate de extraer una regla universalizable y validada empíricamente.\n`;
+    contextText += `4. Minimiza redundancias y enfócate en respuestas de alto valor cognitivo.\n----------------------------------------\n`;
+
     try {
         if (activeModel.startsWith('ollama:')) {
             updateProgress(`Antítesis (Ollama): Enrutando inferencia hacia servicio Ollama local para modelo ${activeModel}...`);
