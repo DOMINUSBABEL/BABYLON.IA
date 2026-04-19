@@ -117,6 +117,7 @@ function initTerminalUI() {
 
             const response = await processTask(input, (progressText) => {
                 reasoningSteps.push(`• ${progressText}`);
+                io.emit('agent_progress', progressText); // Sincronización con el Dashboard
 
                 // Re-render the reasoning box dynamically using log-update
                 const reasoningBox = boxen(reasoningSteps.join('\n'), {
