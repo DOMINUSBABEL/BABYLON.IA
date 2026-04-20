@@ -7,3 +7,8 @@
 **Vulnerability:** `resolveAndValidatePath` in `src/server.js` used `.startsWith(path.resolve(basePath))` to check path boundaries. This is vulnerable to prefix-matching traversal (e.g., base path `/app/workspace` matches `/app/workspace-secret`).
 **Learning:** Checking for directory boundaries using `.startsWith` on paths without the trailing path separator is a common pitfall that allows accessing identically-prefixed sibling directories.
 **Prevention:** Updated validation to check if the `fullPath` exactly matches `resolvedBase` OR starts with `resolvedBase + path.sep`.
+
+## 2025-05-24 - [Command Injection via String Interpolation in exec]
+**Vulnerability:** `createJulesSession` and `pullJulesSession` in `src/jules_bridge.js` used `exec` with string interpolation for `prompt` and `sessionId`, allowing for arbitrary shell command execution.
+**Learning:** Using `exec` and string interpolation to construct shell commands is a major anti-pattern and a high security risk, as any input string directly translates into a shell command unless rigorously sanitized.
+**Prevention:** Used `execFile` instead of `exec`, passing inputs as an array of arguments to bypass the shell entirely and treat input data safely as command arguments.
