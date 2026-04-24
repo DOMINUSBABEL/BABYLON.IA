@@ -2,7 +2,6 @@ import open from 'open';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { exec } from 'child_process';
 
 import { promises as fsPromises } from 'fs';
 
@@ -11,22 +10,8 @@ import { promises as fsPromises } from 'fs';
  * @param {string} url La URL a abrir
  */
 function openBrowser(url) {
-    let command = '';
-    switch (process.platform) {
-        case 'darwin':
-            command = `open "${url}"`;
-            break;
-        case 'win32':
-            command = `start "" "${url}"`;
-            break;
-        default:
-            command = `xdg-open "${url}"`;
-            break;
-    }
-    exec(command, (err) => {
-        if (err) {
-            console.error(`\nNo se pudo abrir el navegador automáticamente. Por favor abre la siguiente URL manualmente: ${url}`);
-        }
+    open(url).catch((err) => {
+        console.error(`\nNo se pudo abrir el navegador automáticamente. Por favor abre la siguiente URL manualmente: ${url}`);
     });
 }
 
