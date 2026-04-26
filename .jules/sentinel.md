@@ -7,3 +7,9 @@
 **Vulnerability:** `resolveAndValidatePath` in `src/server.js` used `.startsWith(path.resolve(basePath))` to check path boundaries. This is vulnerable to prefix-matching traversal (e.g., base path `/app/workspace` matches `/app/workspace-secret`).
 **Learning:** Checking for directory boundaries using `.startsWith` on paths without the trailing path separator is a common pitfall that allows accessing identically-prefixed sibling directories.
 **Prevention:** Updated validation to check if the `fullPath` exactly matches `resolvedBase` OR starts with `resolvedBase + path.sep`.
+## 2025-02-28 - [CRITICAL] Prevent Command Injection via child_process.exec
+**Vulnerability:** Found uses of `child_process.exec` with string interpolation (e.g., `exec("jules remote new --session \"" + prompt + "\"")` and `exec("open \"" + url + "\"")`). This allowed arbitrary command injection if an attacker controlled the `prompt` or `url` variables, as the input was passed directly to the system shell.
+**Learning:** Never use string concatenation or interpolation with `child_process.exec`. Shell interpretation makes it trivial to escape strings and execute arbitrary payloads. In the Node ecosystem, passing shell paths can compromise the host machine.
+**Prevention:**
+1. Use `child_process.execFile` (or `spawn`) with an array of arguments, completely bypassing the shell (e.g., `execFile("jules", ["remote", "new", "--session", prompt])`).
+2. Rely on secure third-party libraries (like `open`) which abstract away platform-specific execution risks instead of writing custom command shells for basic tasks.
