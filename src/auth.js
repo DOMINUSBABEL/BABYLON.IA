@@ -11,22 +11,10 @@ import { promises as fsPromises } from 'fs';
  * @param {string} url La URL a abrir
  */
 function openBrowser(url) {
-    let command = '';
-    switch (process.platform) {
-        case 'darwin':
-            command = `open "${url}"`;
-            break;
-        case 'win32':
-            command = `start "" "${url}"`;
-            break;
-        default:
-            command = `xdg-open "${url}"`;
-            break;
-    }
-    exec(command, (err) => {
-        if (err) {
-            console.error(`\nNo se pudo abrir el navegador automáticamente. Por favor abre la siguiente URL manualmente: ${url}`);
-        }
+    // SECURITY FIX: Using 'open' library prevents command injection vulnerabilities
+    // compared to using child_process.exec() with string interpolation.
+    open(url).catch((err) => {
+        console.error(`\nNo se pudo abrir el navegador automáticamente. Por favor abre la siguiente URL manualmente: ${url}`);
     });
 }
 
@@ -47,7 +35,7 @@ export async function getGeminiOAuthToken() {
         console.log(`[!] Por favor, ejecuta 'gemini login' en tu terminal y completa el proceso en el navegador.`);
 
         // As a fallback/help we can open the Google AI Studio page to get the user started if they prefer API Keys
-        open('https://aistudio.google.com/app/apikey').catch(e => console.error("Error abriendo el navegador:", e));
+        openBrowser('https://aistudio.google.com/app/apikey');
 
         throw new Error(`No se encontró el archivo de credenciales. Debes iniciar sesión con Gemini CLI primero.`);
     }
