@@ -7,3 +7,8 @@
 **Vulnerability:** `resolveAndValidatePath` in `src/server.js` used `.startsWith(path.resolve(basePath))` to check path boundaries. This is vulnerable to prefix-matching traversal (e.g., base path `/app/workspace` matches `/app/workspace-secret`).
 **Learning:** Checking for directory boundaries using `.startsWith` on paths without the trailing path separator is a common pitfall that allows accessing identically-prefixed sibling directories.
 **Prevention:** Updated validation to check if the `fullPath` exactly matches `resolvedBase` OR starts with `resolvedBase + path.sep`.
+
+## 2026-05-07 - [Command Injection via exec string interpolation]
+**Vulnerability:** Found `child_process.exec` being used with string interpolation in `src/jules_bridge.js` (`exec("jules remote new --session \"${prompt}\"")`) and `src/auth.js` (`exec("open \"${url}\"")`). This allowed arbitrary command execution if a malicious payload was injected via `prompt` or `url`.
+**Learning:** Shell evaluation combined with untrusted string inputs is inherently unsafe because malicious input can break out of quotes and execute arbitrary commands.
+**Prevention:** Avoid `child_process.exec`. Use `child_process.execFile` or `spawn` without `{shell: true}` and pass arguments as an array so they are handled safely by the OS rather than evaluated by a shell. Removed unused shell execution blocks where possible.
