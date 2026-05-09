@@ -7,3 +7,8 @@
 **Vulnerability:** `resolveAndValidatePath` in `src/server.js` used `.startsWith(path.resolve(basePath))` to check path boundaries. This is vulnerable to prefix-matching traversal (e.g., base path `/app/workspace` matches `/app/workspace-secret`).
 **Learning:** Checking for directory boundaries using `.startsWith` on paths without the trailing path separator is a common pitfall that allows accessing identically-prefixed sibling directories.
 **Prevention:** Updated validation to check if the `fullPath` exactly matches `resolvedBase` OR starts with `resolvedBase + path.sep`.
+
+## 2024-05-09 - [Command Injection via child_process.exec]
+**Vulnerability:** Arbitrary command injection vulnerability in `src/jules_bridge.js` where user-controlled inputs (`prompt` and `sessionId`) were passed directly into `child_process.exec` using string interpolation. The unused `openBrowser` function in `src/auth.js` also exhibited a similar insecure pattern.
+**Learning:** `child_process.exec` spawns a shell to execute commands, making it susceptible to injection attacks if inputs are not sanitized. Unvalidated string inputs in shell commands are a critical risk.
+**Prevention:** Always use `child_process.execFile` or `child_process.spawn` with an array of arguments, preventing shell evaluation of the inputs. Additionally, use established libraries like `open` instead of custom insecure wrapper functions for specific OS-level tasks.
