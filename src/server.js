@@ -288,9 +288,9 @@ io.on('connection', (socket) => {
 
     socket.on('check_local_models', async () => {
         // Simular o ejecutar un chequeo de modelos en el sistema (Ollama, Edge)
-        const { exec } = await import('child_process');
+        const { execFile } = await import('child_process');
         
-        exec('ollama list', (err, stdout, stderr) => {
+        execFile('ollama', ['list'], (err, stdout, stderr) => {
             if (!err && stdout) {
                 socket.emit('system_log', `Modelos Ollama detectados:\n${stdout.split('\n').slice(1,4).join('\n')}`);
             } else {
