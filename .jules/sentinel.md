@@ -7,3 +7,8 @@
 **Vulnerability:** `resolveAndValidatePath` in `src/server.js` used `.startsWith(path.resolve(basePath))` to check path boundaries. This is vulnerable to prefix-matching traversal (e.g., base path `/app/workspace` matches `/app/workspace-secret`).
 **Learning:** Checking for directory boundaries using `.startsWith` on paths without the trailing path separator is a common pitfall that allows accessing identically-prefixed sibling directories.
 **Prevention:** Updated validation to check if the `fullPath` exactly matches `resolvedBase` OR starts with `resolvedBase + path.sep`.
+
+## 2024-05-11 - Replace child_process.exec with safer alternatives
+**Vulnerability:** Use of `child_process.exec` and `child_process.execPromise` allowed executing shell commands with string interpolation, which exposes the system to command injection vulnerabilities. The deprecated `openBrowser` function in `src/auth.js` and system model check in `src/server.js` were particularly problematic.
+**Learning:** Using `exec` directly passes strings to the shell, making it unsafe when inputs could be controlled or manipulated. When working with local utilities, it is essential to use strictly structured execution patterns.
+**Prevention:** Always use `child_process.execFile` with argument arrays or robust dedicated libraries (such as `open` for URLs) to bypass shell evaluation of inputs. This ensures parameters are handled safely and command injection is mitigated.
