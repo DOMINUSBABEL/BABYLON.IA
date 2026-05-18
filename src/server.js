@@ -305,7 +305,9 @@ io.on('connection', (socket) => {
                 try {
                     let steps = [];
 
+                    const eventId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(7);
                     const gatewayEvent = {
+                        eventId: eventId,
                         text: autoPrompt,
                         hasMedia: false,
                         media: null,
@@ -316,14 +318,10 @@ io.on('connection', (socket) => {
                         isCommand: false
                     };
 
-                    const responseObj = await gateway.handleEvent(gatewayEvent, (text) => {
-                        steps.push(`• ${text}`);
-                        io.emit('agent_progress', text);
-                    });
+                    await gateway.ingestEvent(gatewayEvent);
                     
-                    console.log(chalk.green(`[♥] Ciclo de automejora completado.`));
-                    io.emit('system_log', `Heartbeat completado. Revisa tu Wiki Memory para nuevas síntesis.`);
-                    io.emit('agent_status', 'En espera de directivas');
+                    // The actual progress and completion will be handled globally by hermes.subscribeOutbound
+                    // We no longer block here waiting for the synchronous result.
                 } catch(e) {
                     console.error(chalk.red(`[♥] Error en Heartbeat: ${e.message}`));
                     io.emit('system_error', `Error en Heartbeat Loop: ${e.message}`);

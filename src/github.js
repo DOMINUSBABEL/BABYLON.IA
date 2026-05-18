@@ -2,6 +2,8 @@ import { Octokit } from "@octokit/rest";
 import { Webhooks, createNodeMiddleware } from "@octokit/webhooks";
 import chalk from "chalk";
 import { gateway } from "./gateway.js";
+import { hermes } from "./hermes_broker.js";
+import crypto from "crypto";
 
 export function initGithubClient(app, agentEvents) {
     const token = process.env.GITHUB_TOKEN;
@@ -16,6 +18,34 @@ export function initGithubClient(app, agentEvents) {
 
     const octokit = new Octokit({ auth: token });
     const webhooks = new Webhooks({ secret: webhookSecret });
+    const activeIssues = new Map();
+
+    // Suscripción asíncrona a las respuestas del motor de IA
+    hermes.subscribeOutbound(async (responseObj) => {
+        if (responseObj.channel === 'github') {
+            try {
+                if (responseObj.type === 'progress') {
+                    console.log(chalk.yellow(`     [Geist GitHub] ${responseObj.text}`));
+                    if (agentEvents) agentEvents.emit('whatsapp_progress', responseObj.text);
+                } else if (responseObj.type === 'text') {
+                    const issueData = activeIssues.get(responseObj.eventId);
+                    if (issueData) {
+                        await octokit.rest.issues.createComment({
+                            owner: issueData.owner,
+                            repo: issueData.repo,
+                            issue_number: issueData.issue_number,
+                            body: responseObj.text
+                        });
+                        activeIssues.delete(responseObj.eventId);
+                        console.log(chalk.green('  -> Síntesis generada (GitHub).'));
+                        if (agentEvents) agentEvents.emit('whatsapp_response', 'Respondido en GitHub.');
+                    }
+                }
+            } catch (error) {
+                console.error(chalk.red(`[Error Enviando Tarea a GitHub]: ${error.message}`));
+            }
+        }
+    });
 
     const processGithubEvent = async (event) => {
         const payload = event.payload;
@@ -58,7 +88,17 @@ export function initGithubClient(app, agentEvents) {
             console.log(chalk.blue(`\n[GitHub] Tesis Recibida de @${author} en ${repo}#${issueNumber}: ${text}`));
             
             const cleanText = text.replace(new RegExp(mentionText, 'gi'), '').trim();
+            const eventId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(7);
+            
+            // Guardar contexto para cuando Hermes responda
+            activeIssues.set(eventId, {
+                owner: payload.repository.owner.login,
+                repo: payload.repository.name,
+                issue_number: issueNumber
+            });
+
             const gatewayEvent = {
+                eventId: eventId,
                 text: cleanText,
                 hasMedia: false,
                 media: null,
@@ -73,26 +113,13 @@ export function initGithubClient(app, agentEvents) {
 
             if (agentEvents) agentEvents.emit('whatsapp_command_start', `GitHub: ${repo}#${issueNumber}`);
 
-            const responseObj = await gateway.handleEvent(gatewayEvent, (progressText) => {
-                console.log(chalk.yellow(`     [Geist GitHub] ${progressText}`));
-                if (agentEvents) agentEvents.emit('whatsapp_progress', progressText);
-            });
+            const ingestResult = await gateway.ingestEvent(gatewayEvent);
 
-            if (responseObj.type === 'error' && responseObj.text === '⚠️ No autorizado.') {
+            if (ingestResult.type === 'error' && ingestResult.text === '⚠️ No autorizado.') {
+                activeIssues.delete(eventId);
                 return;
             }
 
-            console.log(chalk.green('  -> Síntesis generada (GitHub).'));
-            
-            if (responseObj.type === 'text') {
-                 await octokit.rest.issues.createComment({
-                     owner: payload.repository.owner.login,
-                     repo: payload.repository.name,
-                     issue_number: issueNumber,
-                     body: responseObj.text
-                 });
-                 if (agentEvents) agentEvents.emit('whatsapp_response', 'Respondido en GitHub.');
-            }
         } catch (error) {
             console.error(chalk.red(`[Error Procesando Tarea en GitHub]: ${error.message}`));
         }
