@@ -96,8 +96,14 @@ graph TD;
     Synthesis --> User;
 ```
 
-### 3.1 Multi-Platform Integrations
-The agent utilizes `whatsapp-web.js` for WhatsApp, `telegraf` for Telegram, and `twitter-api-v2` for X. It also includes a local **Web Dashboard** with real-time WebSockets (`socket.io`). This allows the system to listen for specific commands sent from any chat, triggering the agent's internal processes.
+### 3.1 Hermes Omni-Channel Architecture (Redis Broker)
+To handle high-concurrency across multiple messaging channels (WhatsApp, Web Dashboard, Discord, WeChat, Telegram) without blocking the internal Hegelian reasoning loop, BABYLON.IA utilizes a **Hermes Architecture**. This involves a Pub/Sub message broker powered by Redis.
+* **`babylon:inbound` queue:** All platforms ingest raw messages and publish them here.
+* **Agent Core:** Operates asynchronously as a consumer, processing the `inbound` events and publishing the synthesis/progress back.
+* **`babylon:outbound` queue:** The specific messaging channels listen here and relay the AI's final responses back to the original user.
+
+### 3.2 Multi-Platform Integrations
+The agent utilizes `whatsapp-web.js` for WhatsApp, `discord.js` for Discord, `wechaty` for WeChat, `telegraf` for Telegram, and `twitter-api-v2` for X. It also includes a local **Web Dashboard** with real-time WebSockets (`socket.io`) and a **Futuristic TUI (Prime Radiant)**.
 
 ### 3.2 Gemini OAuth Bridge
 To bypass expensive API usage fees, BABYLON.IA implements an Auth-Bridge. It reads the local `~/.gemini/oauth_creds.json` file, created by the Gemini CLI, to authenticate and route analytical tasks to the Gemini LLM. It also supports standard API Keys and local models via Ollama.
@@ -153,7 +159,10 @@ The system is designed for deployment on any Node.js environment, including low-
 ### 5.1 Prerequisites
 - Node.js installed (v18+ recommended).
 - Gemini CLI authenticated (`gemini login`) OR a Gemini API Key.
+- **Redis Server** (required for the Hermes Architecture).
 - Optional: Ollama installed for local Open-Source Models.
+- Optional: `DISCORD_TOKEN` in `.env` for Discord integration.
+- Optional: WeChat account (scannable via CLI) for WeChat integration.
 - Git for cloning the repository.
 
 ### 5.2 Universal Installation
