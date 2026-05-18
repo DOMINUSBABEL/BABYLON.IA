@@ -3,16 +3,90 @@ import fs from 'fs';
 import path from 'path';
 import chalk from 'chalk';
 import { fileURLToPath } from 'url';
+import CFonts from 'cfonts';
+import gradient from 'gradient-string';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 
-export async function runOnboard() {
-  console.log(chalk.cyan(`\n================================================`));
-  console.log(chalk.bold.hex('#FFD700')(` BABYLON.IA - SECUENCIA DE INICIO (ONBOARD)`));
-  console.log(chalk.cyan(`================================================\n`));
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+async function showOnboardBanner() {
+    console.clear();
+    const termWidth = process.stdout.columns || 80;
+    const isMobile = termWidth < 70;
+
+    CFonts.say(isMobile ? 'BABYLON' : 'BABYLON.IA', {
+        font: isMobile ? 'simpleBlock' : 'block',
+        align: 'center',
+        colors: ['#00aaff', '#ffd700'],
+        background: 'transparent',
+        letterSpacing: 1,
+        lineHeight: 1,
+        space: true,
+        maxLength: '0',
+        gradient: ['#0000ff', '#ffd700'],
+        independentGradient: false,
+        transitionGradient: true,
+        env: 'node'
+    });
+
+    const babylonGradient = gradient(['#0000aa', '#0000ff', '#ffd700']);
+
+    if (!isMobile) {
+        const city = [
+            "                                       /\\                                          ",
+            "                                      |::|                                          ",
+            "                                     < ++ >                                         ",
+            "                                      |::|                                          ",
+            "         _/\\_                         /++++\\                         _/\\_           ",
+            "        |    |                       /++++++\\                       |    |          ",
+            "       /      \\                     |========|                     /      \\         ",
+            "      |        |                   /++++++++++\\                   |        |        ",
+            "     /__________\\                 /++++++++++++\\                 /__________\\       ",
+            "     |==========|                |==============|                |==========|       ",
+            "    /++++++++++++\\              /++++++++++++++++\\              /++++++++++++\\      ",
+            "   /++++++++++++++\\            |==================|            /++++++++++++++\\     ",
+            "   |==============|           /++++++++++++++++++++\\           |==============|     ",
+            "  /++++++++++++++++\\         /++++++++++++++++++++++\\         /++++++++++++++++\\    ",
+            "  |================|        |========================|        |================|    ",
+            " /++++++++++++++++++\\      /++++++++++++++++++++++++++\\      /++++++++++++++++++\\   ",
+            " |==================|     /++++++++++++++++++++++++++++\\     |==================|   ",
+            "/++++++++++++++++++++\\   |==============================|   /++++++++++++++++++++\\  ",
+            "|======+======+======|  /++++++++++++++++++++++++++++++++\\  |======+======+======|  ",
+            "|  ||  |  ||  |  ||  | |==================================| |  ||  |  ||  |  ||  |  ",
+            "|__||__|__||__|__||__|/++++++++++++++++++++++++++++++++++++\\|__||__|__||__|__||__|  "
+        ];
+        for (let line of city) {
+            console.log(babylonGradient(line));
+            await sleep(20);
+        }
+    }
+
+    const archText = isMobile 
+        ? '   ::: ONBOARD SEQUENCE :::\n'
+        : '               ::: ARCHITECTURE GEIST // ONBOARD SEQUENCE :::\n';
+        
+    let typingEffect = '';
+    const textPadding = isMobile ? Math.max(0, Math.floor((termWidth - archText.trim().length) / 2)) : 0;
+    
+    if (isMobile && textPadding > 0) {
+        process.stdout.write(' '.repeat(textPadding));
+    }
+    
+    for (let i = 0; i < archText.length; i++) {
+        typingEffect += archText[i];
+        if (archText[i] !== '\n') {
+            process.stdout.write('\r' + (isMobile ? ' '.repeat(textPadding) : '') + chalk.hex('#ffd700').bold(typingEffect));
+        }
+        await sleep(10);
+    }
+    console.log('\n');
+}
+
+export async function runOnboard() {
+  await showOnboardBanner();
   console.log(chalk.gray('Iniciando configuración interactiva del Agente BABYLON.IA...\n'));
 
   // 1. Gemini Configuration
