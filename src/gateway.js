@@ -57,6 +57,9 @@ class Gateway {
                 }
                 
                 let fileName = event.media.filename;
+                if (fileName) {
+                    fileName = path.basename(fileName);
+                }
                 if (!fileName) {
                     let ext = '';
                     if (event.media.mimetype) {
@@ -113,11 +116,14 @@ class Gateway {
             if (commandStr.toLowerCase().startsWith('enviar ')) {
                 const filePathStr = commandStr.replace(/enviar /i, '').trim();
                 const cleanPath = filePathStr.replace(/^"|"$/g, '');
+                const workspaceDir = path.resolve(process.cwd(), 'workspace');
+                const resolvedPath = path.resolve(workspaceDir, cleanPath);
+                const safePath = (resolvedPath === workspaceDir || resolvedPath.startsWith(workspaceDir + path.sep)) ? resolvedPath : null;
                 
-                if (fs.existsSync(cleanPath)) {
-                    return { type: 'file', path: cleanPath, caption: '*Geist File Extractor:*\nAquí tienes el documento solicitado de tu PC.' };
+                if (safePath && fs.existsSync(safePath)) {
+                    return { type: 'file', path: safePath, caption: '*Geist File Extractor:*\nAquí tienes el documento solicitado de tu PC.' };
                 } else {
-                    return { type: 'error', text: `❌ *Aporía Encontrada:*\nEl archivo no existe en la ruta local proporcionada:\n_${cleanPath}_` };
+                    return { type: 'error', text: `❌ *Aporía Encontrada:*\nEl archivo no existe en la ruta local proporcionada o no tienes permisos:\n_${cleanPath}_` };
                 }
             }
         }
