@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import open from 'open';
 import fs from 'fs';
 import { runOnboard } from '../src/onboard.js';
+import { startTUI, startGatewayTUI } from '../src/tui_dashboard.js';
 import dotenv from 'dotenv';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -153,22 +154,13 @@ program
     await showBanner();
     
     if (!fs.existsSync(path.join(rootDir, '.env'))) {
-      console.warn(chalk.yellow('Advertencia: No se encontrÃ³ el archivo .env. Por favor, ejecuta "babylonia onboard" primero.'));
+      console.warn(chalk.yellow('Advertencia: No se encontró el archivo .env. Por favor, ejecuta "babylonia onboard" primero.'));
     }
 
-    console.log('Iniciando BABYLON.IA Gateway...');
-
-    // Iniciar el servidor web (Dashboard)
-    const serverProcess = fork(path.join(rootDir, 'src', 'server.js'), [], {
-      cwd: rootDir,
-      env: { ...process.env, BABYLON_MODE: 'gateway' },
-      stdio: 'inherit'
-    });
-
-    serverProcess.on('exit', (code) => {
-      console.log(`Gateway detenido con cÃ³digo ${code}`);
-      process.exit(code);
-    });
+    console.log('Iniciando BABYLON.IA Gateway con TUI (Prime Radiant)...');
+    
+    // El TUI se encarga de forkar el server.js con stdio pipes y manejar la UI avanzada
+    startGatewayTUI(rootDir);
   });
 
 program
@@ -181,6 +173,13 @@ program
 
     await open(url);
     process.exit(0);
+  });
+
+program
+  .command('console')
+  .description('Inicia la interfaz de terminal futurista (Prime Radiant / Foundation UI).')
+  .action(() => {
+    startTUI();
   });
 
 program.parse(process.argv);
