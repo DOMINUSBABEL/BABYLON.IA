@@ -156,10 +156,10 @@ export class FuturisticTUI {
             });
             this.dynamicPanel.setData({ titles: ['T1', 'T2', 'T3'], data: [5, 10, 8] });
         } else if (layout === 'processing') {
-            // Procedural UI: Swap Map for Donut/Progress
+            // Procedural UI: Swap Map for Donut/Progress (Cognitive Load Visualizer)
             this.screen.remove(this.dynamicPanel);
             this.dynamicPanel = this.grid.set(7, 0, 5, 4, contrib.donut, {
-                label: ' NEURAL LOAD ',
+                label: ' NEURAL LOAD [ PROCESSING ] ',
                 radius: 8, arcWidth: 3, remainColor: 'black', yPadding: 2
             });
             this.dynamicPanel.setData([
@@ -167,6 +167,15 @@ export class FuturisticTUI {
                 {percent: 90, label: 'RAM', color: 'yellow'}
             ]);
             this.headerBox.style.fg = 'yellow'; // Pulse effect
+            this.headerBox.setContent(chalk.hex('#ffd700').bold(`
+                              /\\^/\\
+                             |::|::|
+                            < ++|++ >
+                           /=========\\
+                          /+++++++++++\\
+                         /=============\\
+                      [ DECODING DIRECTIVE ]
+            `));
         } else {
             // Default: Map
             this.screen.remove(this.dynamicPanel);
@@ -176,6 +185,15 @@ export class FuturisticTUI {
             });
             this.dynamicPanel.addMarker({"lon" : "-79.0000", "lat" : "43.5000", color: "red", char: "X" }); 
             this.headerBox.style.fg = 'cyan';
+            this.headerBox.setContent(chalk.hex('#ffd700').bold(`
+                              /\\^/\\
+                             |::|::|
+                            < ++|++ >
+                           /=========\\
+                          /+++++++++++\\
+                         /=============\\
+                      [ DATA NEXUS GEIST ]
+            `));
         }
         this.screen.render();
     }
@@ -255,21 +273,39 @@ export class FuturisticTUI {
         const series1 = { title: 'Trantor Variance', x: ['t-5', 't-4', 't-3', 't-2', 't-1', 't0'], y: [5, 10, 15, 8, 12, 20] };
         const series2 = { title: 'Terminus Stability', x: ['t-5', 't-4', 't-3', 't-2', 't-1', 't0'], y: [90, 85, 88, 92, 95, 96], style: { line: 'yellow' } };
         
+        // Procedural Animation loop
+        let tick = 0;
         setInterval(() => {
+            tick++;
             series1.y.shift(); series1.y.push(Math.floor(Math.random() * 30));
             this.psychohistoryChart.setData([series1, series2]);
             
             if (this.currentLayout === 'processing' && this.dynamicPanel.setData) {
+                 // Simulate high neural load and glitching during processing
                  this.dynamicPanel.setData([
-                    {percent: Math.floor(Math.random() * 20) + 70, label: 'CPU', color: 'red'},
-                    {percent: Math.floor(Math.random() * 10) + 40, label: 'RAM', color: 'yellow'}
+                    {percent: Math.floor(Math.random() * 20) + 80, label: 'CPU', color: 'red'},
+                    {percent: Math.floor(Math.random() * 10) + 85, label: 'RAM', color: 'yellow'}
                  ]);
+                 
+                 // Glitch effect on the header
+                 if (tick % 3 === 0) {
+                    this.headerBox.style.fg = Math.random() > 0.5 ? 'red' : 'magenta';
+                 } else {
+                    this.headerBox.style.fg = 'yellow';
+                 }
             } else if (this.currentLayout === 'dataviz' && this.dynamicPanel.setData) {
                  this.dynamicPanel.setData({ titles: ['T1', 'T2', 'T3'], data: [Math.floor(Math.random()*10), Math.floor(Math.random()*10), Math.floor(Math.random()*10)] });
+            } else {
+                 // Default radar sweeping simulation on map by toggling marker colors
+                 if (tick % 2 === 0 && this.dynamicPanel.clearMarkers) {
+                     this.dynamicPanel.clearMarkers();
+                     this.dynamicPanel.addMarker({"lon" : "-79.0000", "lat" : "43.5000", color: tick % 4 === 0 ? "cyan" : "red", char: "X" }); 
+                     this.dynamicPanel.addMarker({"lon" : (Math.random() * 360 - 180).toString(), "lat" : (Math.random() * 180 - 90).toString(), color: "yellow", char: "O" });
+                 }
             }
 
             this.screen.render();
-        }, 1500);
+        }, 1000);
     }
 
     render() {
