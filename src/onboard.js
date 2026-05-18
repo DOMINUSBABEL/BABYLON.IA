@@ -212,9 +212,6 @@ GEMINI_API_KEY=${geminiApiKey}
 WORKSPACE_DIR=${workspaceDir}
 ENABLED_PLATFORMS=${platforms.join(',')}
 
-# Arquitectura Hermes
-REDIS_URL=${redisUrl}
-
 # Seguridad
 AUTHORIZED_NUMBERS=${authorizedNumbers}
 

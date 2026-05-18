@@ -1,89 +1,81 @@
-import { createClient } from 'redis';
 import { EventEmitter } from 'events';
 import chalk from 'chalk';
 
+/**
+ * Hermes Broker - Native Node.js Implementation
+ * Reemplaza Redis con un sistema de cola en memoria y EventEmitter
+ * para garantizar un procesamiento ordenado y sopesado.
+ */
 class HermesBroker {
     constructor() {
-        this.useRedis = !!process.env.REDIS_URL;
-        this.localEmitter = new EventEmitter();
-        this.pubClient = null;
-        this.subClient = null;
+        this.emitter = new EventEmitter();
+        this.inboundQueue = [];
+        this.isProcessing = false;
+        this.inboundHandlers = [];
         this.isReady = false;
     }
 
     async init() {
         if (this.isReady) return;
-        
-        if (this.useRedis) {
-            try {
-                this.pubClient = createClient({ url: process.env.REDIS_URL });
-                this.subClient = this.pubClient.duplicate();
-
-                this.pubClient.on('error', (err) => console.error(chalk.red(`[Hermes Redis Pub] Error: ${err.message}`)));
-                this.subClient.on('error', (err) => console.error(chalk.red(`[Hermes Redis Sub] Error: ${err.message}`)));
-
-                await this.pubClient.connect();
-                await this.subClient.connect();
-                
-                this.isReady = true;
-                console.log(chalk.greenBright('🌐 [Hermes Broker] Conectado exitosamente a Redis. Arquitectura Omni-Channel activa.'));
-            } catch (err) {
-                console.warn(chalk.yellow(`⚠️ [Hermes Broker] Falla al conectar a Redis: ${err.message}. Aplicando fallback a EventEmitter local.`));
-                this.useRedis = false;
-                this.isReady = true;
-            }
-        } else {
-            console.log(chalk.cyan('🌐 [Hermes Broker] REDIS_URL no detectado. Usando bus de mensajería local (EventEmitter).'));
-            this.isReady = true;
-        }
+        console.log(chalk.cyan('🌐 [Hermes Broker] Inicializando bus de mensajería asíncrona nativo (Node.js)...'));
+        this.isReady = true;
     }
 
+    /**
+     * Encola un evento entrante de cualquier plataforma.
+     */
     async publishInbound(eventData) {
         if (!this.isReady) await this.init();
-        if (this.useRedis) {
-            await this.pubClient.publish('babylon:inbound', JSON.stringify(eventData));
-        } else {
-            this.localEmitter.emit('babylon:inbound', eventData);
-        }
+        this.inboundQueue.push(eventData);
+        // Iniciamos el procesamiento de la cola si no está activo
+        this.processQueue();
     }
 
+    /**
+     * Procesa la cola de forma ordenada y secuencial para no saturar el Agent Core
+     * ni solapar las iteraciones dialécticas de la IA.
+     */
+    async processQueue() {
+        if (this.isProcessing || this.inboundQueue.length === 0) return;
+        this.isProcessing = true;
+
+        while (this.inboundQueue.length > 0) {
+            const eventData = this.inboundQueue.shift();
+            
+            // Procesamos el evento mediante todos los consumidores registrados (Agent Core)
+            for (const handler of this.inboundHandlers) {
+                try {
+                    await handler(eventData); // Esperamos a que la IA termine su flujo antes de tomar el siguiente mensaje
+                } catch (e) {
+                    console.error(chalk.red(`[Hermes Broker] Error procesando evento inbound: ${e.message}`));
+                }
+            }
+        }
+        
+        this.isProcessing = false;
+    }
+
+    /**
+     * Publica una respuesta asíncrona de la IA hacia los canales.
+     * Esto no requiere cola bloqueante, se emite inmediatamente.
+     */
     async publishOutbound(responseObj) {
         if (!this.isReady) await this.init();
-        if (this.useRedis) {
-            await this.pubClient.publish('babylon:outbound', JSON.stringify(responseObj));
-        } else {
-            this.localEmitter.emit('babylon:outbound', responseObj);
-        }
+        this.emitter.emit('babylon:outbound', responseObj);
     }
 
-    async subscribeInbound(handler) {
-        if (!this.isReady) await this.init();
-        if (this.useRedis) {
-            await this.subClient.subscribe('babylon:inbound', (message) => {
-                try {
-                    handler(JSON.parse(message));
-                } catch (e) {
-                    console.error('[Hermes Broker] Error parseando inbound:', e);
-                }
-            });
-        } else {
-            this.localEmitter.on('babylon:inbound', handler);
-        }
+    /**
+     * Registra un consumidor para los eventos entrantes (Usado por Agent Core).
+     */
+    subscribeInbound(handler) {
+        this.inboundHandlers.push(handler);
     }
 
-    async subscribeOutbound(handler) {
-        if (!this.isReady) await this.init();
-        if (this.useRedis) {
-            await this.subClient.subscribe('babylon:outbound', (message) => {
-                try {
-                    handler(JSON.parse(message));
-                } catch (e) {
-                    console.error('[Hermes Broker] Error parseando outbound:', e);
-                }
-            });
-        } else {
-            this.localEmitter.on('babylon:outbound', handler);
-        }
+    /**
+     * Registra un consumidor para las respuestas salientes (Usado por Gateways: WhatsApp, Discord, etc).
+     */
+    subscribeOutbound(handler) {
+        this.emitter.on('babylon:outbound', handler);
     }
 }
 

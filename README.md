@@ -96,9 +96,9 @@ graph TD;
     Synthesis --> User;
 ```
 
-### 3.1 Hermes Omni-Channel Architecture (Redis Broker)
-To handle high-concurrency across multiple messaging channels (WhatsApp, Web Dashboard, Discord, WeChat, Telegram) without blocking the internal Hegelian reasoning loop, BABYLON.IA utilizes a **Hermes Architecture**. This involves a Pub/Sub message broker powered by Redis.
-* **`babylon:inbound` queue:** All platforms ingest raw messages and publish them here.
+### 3.1 Hermes Omni-Channel Architecture (Native Node.js Broker)
+To handle high-concurrency across multiple messaging channels (WhatsApp, Web Dashboard, Discord, WeChat, Telegram) without blocking the internal Hegelian reasoning loop, BABYLON.IA utilizes a **Hermes Architecture**. This involves a native Node.js asynchronous message broker (using `EventEmitter` and internal Queues).
+* **`babylon:inbound` queue:** All platforms ingest raw messages and publish them here. The broker processes them sequentially to avoid cognitive overload.
 * **Agent Core:** Operates asynchronously as a consumer, processing the `inbound` events and publishing the synthesis/progress back.
 * **`babylon:outbound` queue:** The specific messaging channels listen here and relay the AI's final responses back to the original user.
 
