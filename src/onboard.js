@@ -22,7 +22,7 @@ export async function runOnboard() {
       geminiApiKey = await input({ message: 'Introduce tu API Key de Gemini:' });
   }
 
-  // 2.5 Select Environment & OS
+  // 2. Select Environment & OS
   const environment = await select({
     message: 'Selecciona tu Entorno/OS de despliegue (optimiza los recursos y modelos sugeridos):',
     choices: [
@@ -33,153 +33,90 @@ export async function runOnboard() {
     ]
   });
 
-  // Determina el flag simplificado para lógica interna
   const envSimplified = environment === 'mobile_terminal' ? 'mobile_terminal' : 'desktop';
 
-  // 2. Select Model based on Environment
+  // 3. Select Cognitive Model
   console.log(chalk.gray(`\nSugerencia: Para tu entorno seleccionado (${environment}), se recomiendan opciones marcadas con [Recomendado]`));
 
   const modelChoices = [
-      { name: 'gemini-2.0-flash-lite-preview-02-05 (OAUTH CLI - Ultra Ligero) [Recomendado Android]', value: 'gemini-2.0-flash-lite-preview-02-05' },
-      { name: 'gemini-3.1-pro-preview (OAUTH CLI - Súper-Inteligencia, máximo razonamiento)', value: 'gemini-3.1-pro-preview' },
-      { name: 'gemini-3.0-pro (OAUTH CLI - Avanzado, reasoning superior)', value: 'gemini-3.0-pro' },
-      { name: 'gemini-2.5-pro (OAUTH CLI - Avanzado, razonamiento complejo)', value: 'gemini-2.5-pro' },
-      { name: 'gemini-2.5-flash (OAUTH CLI - Rápido, respuestas instantáneas)', value: 'gemini-2.5-flash' },
+      { name: 'gemini-3.1-pro-preview (Súper-Inteligencia, máximo razonamiento) [Recomendado]', value: 'gemini-3.1-pro-preview' },
+      { name: 'gemini-3.0-pro (Avanzado, reasoning superior)', value: 'gemini-3.0-pro' },
+      { name: 'gemini-2.5-pro (Avanzado, razonamiento complejo)', value: 'gemini-2.5-pro' },
+      { name: 'gemini-2.5-flash (Rápido, respuestas instantáneas)', value: 'gemini-2.5-flash' },
+      { name: 'gemini-2.0-flash-lite-preview-02-05 (Ultra Ligero)', value: 'gemini-2.0-flash-lite-preview-02-05' },
   ];
 
   if (environment === 'mobile_terminal') {
       modelChoices.push({ name: 'ollama:qwen2.5:0.5b / llama3.2:1b (Local Open Source - Ultra Cuantizado para Android)', value: 'ollama:qwen2.5:0.5b' });
-  } else if (environment === 'desktop_mac') {
-      modelChoices.push({ name: 'mlx:llama3 (Apple MLX Local Open Source - Optimizado para M1/M2/M3)', value: 'mlx:llama3' });
-      modelChoices.push({ name: 'ollama:gemma2 (Local Open Source - Vía Ollama Mac)', value: 'ollama:gemma2' });
   } else {
-      modelChoices.push({ name: 'ollama:gemma2 (Local Open Source - Optimizado Windows/Linux)', value: 'ollama:gemma2' });
-      modelChoices.push({ name: 'ollama:qwen2.5 (Local Open Source - Rápido Windows/Linux)', value: 'ollama:qwen2.5' });
+      modelChoices.push({ name: 'ollama:gemma2 (Local Open Source - Optimizado OS)', value: 'ollama:gemma2' });
   }
-
-  // Agregar opciones de AI Edge para todos los entornos. Se asume que el usuario los corre mediante un backend compatible
-  modelChoices.push({ name: 'aiedge:gemma-4-e2b (Google AI Edge Gallery - Gemma 4 E2B)', value: 'aiedge:gemma-4-e2b' });
-  modelChoices.push({ name: 'aiedge:gemma-4-e4b (Google AI Edge Gallery - Gemma 4 E4B)', value: 'aiedge:gemma-4-e4b' });
 
   const model = await select({
     message: 'Selecciona el modelo cognitivo a utilizar:',
     choices: modelChoices
   });
 
-  const isLocalModel = model.startsWith('ollama:') || model.startsWith('aiedge:') || model.startsWith('mlx:');
-  if (isLocalModel) {
-      const downloadLocal = await confirm({ message: `El modelo seleccionado (${model}) es de ejecución local. ¿Deseas que BABYLON.IA lo descargue e instale ahora de forma óptima para tu entorno?` });
-      
-      if (downloadLocal) {
-          const { execSync } = await import('child_process');
-          
-          if (model.startsWith('ollama:')) {
-              const ollamaModel = model.replace('ollama:', '');
-              console.log(chalk.yellow(`\n[!] Iniciando descarga a través del motor Ollama: ${ollamaModel}`));
-              try {
-                  execSync(`ollama pull ${ollamaModel}`, { stdio: 'inherit' });
-                  console.log(chalk.green(`[✓] Modelo ${ollamaModel} instalado correctamente en el servicio Ollama.`));
-              } catch (error) {
-                  console.error(chalk.red(`\n[X] Error al intentar descargar en Ollama. Asegúrate de tener Ollama instalado y en ejecución en tu sistema.`));
-                  console.log(chalk.gray(`Si estás en Termux (Android), considera instalar Ollama vía proot-distro o usar modelos AI Edge (GGUF).`));
-              }
-          } else if (model.startsWith('aiedge:')) {
-              // Descargar archivo GGUF a la carpeta models
-              const modelsDir = path.join(rootDir, 'workspace', 'models');
-              if (!fs.existsSync(modelsDir)) fs.mkdirSync(modelsDir, { recursive: true });
-              
-              const is2B = model.includes('e2b');
-              const modelName = is2B ? 'gemma-2-2b-it-Q4_K_M.gguf' : 'gemma-2-9b-it-Q4_K_M.gguf';
-              const destPath = path.join(modelsDir, modelName);
-              
-              // URLs públicas de HuggingFace optimizadas (GGUF cuantizados en 4-bit para correr en CPU/móvil)
-              const downloadUrl = is2B 
-                  ? "https://huggingface.co/bartowski/gemma-2-2b-it-GGUF/resolve/main/gemma-2-2b-it-Q4_K_M.gguf"
-                  : "https://huggingface.co/bartowski/gemma-2-9b-it-GGUF/resolve/main/gemma-2-9b-it-Q4_K_M.gguf";
-                  
-              console.log(chalk.yellow(`\n[!] Iniciando descarga directa del binario cuantizado Edge (${modelName}) a ${modelsDir}...`));
-              console.log(chalk.gray(`Descargando desde: ${downloadUrl}\n(Esto puede tardar varios minutos dependiendo de tu conexión)`));
-              
-              try {
-                  if (process.platform === 'win32') {
-                      execSync(`powershell -NoProfile -Command "Invoke-WebRequest -Uri '${downloadUrl}' -OutFile '${destPath}'"`, { stdio: 'inherit' });
-                  } else {
-                      // Para Termux/Linux/macOS usamos curl que muestra barra de progreso por defecto con stdio: inherit
-                      execSync(`curl -L -C - -o "${destPath}" "${downloadUrl}"`, { stdio: 'inherit' });
-                  }
-                  console.log(chalk.green(`\n[✓] Binario Edge instalado exitosamente en: ${destPath}`));
-                  console.log(chalk.cyan(`\n[i] Para ejecutar este modelo en Termux (Android), se recomienda usar llama.cpp:`));
-                  console.log(chalk.gray(`    pkg install llama.cpp`));
-                  console.log(chalk.gray(`    llama-cli -m workspace/models/${modelName} -c 2048 -i\n`));
-              } catch(e) {
-                  console.error(chalk.red(`\n[X] Error en la descarga del modelo Edge: ${e.message}`));
-                  console.log(chalk.yellow(`Puedes descargarlo manualmente desde un navegador y moverlo a la ruta: ${destPath}`));
-              }
-          } else if (model.startsWith('mlx:')) {
-              console.log(chalk.yellow(`\n[!] Para modelos MLX en macOS, asegúrate de tener el framework de Apple instalado.`));
-              console.log(chalk.cyan(`Puedes instalarlo ejecutando: pip install mlx-lm`));
-          }
-      }
-  }
-
-  // 3. Platform integrations
+  // 4. Platform integrations (Omni-Channel)
+  console.log(chalk.magenta(`\n[🌐] Configuración Omni-Channel (Arquitectura Hermes)`));
   const platforms = await checkbox({
     message: 'Selecciona las plataformas donde el agente estará activo (Usa la barra espaciadora):',
     choices: [
-      { name: 'WhatsApp Web', value: 'whatsapp' },
-      { name: 'Dashboard Web Local (Chat Interno)', value: 'web', checked: true },
+      { name: 'Dashboard Web Local y TUI', value: 'web', checked: true },
+      { name: 'WhatsApp (via whatsapp-web.js)', value: 'whatsapp' },
+      { name: 'WhatsApp Autónomo (via OpenWA REST API)', value: 'openwa' },
+      { name: 'Discord Bot', value: 'discord' },
+      { name: 'WeChat Bot', value: 'wechat' },
       { name: 'Telegram Bot', value: 'telegram' },
-      { name: 'X (Twitter)', value: 'twitter' }
+      { name: 'X (Twitter)', value: 'twitter' },
+      { name: 'GitHub Webhooks', value: 'github' }
     ]
   });
 
-  // 4. Skills / Features
-  const features = await checkbox({
-    message: 'Activa funciones y herramientas (Skills/MCPs) para el agente:',
-    choices: [
-      { name: 'Acceso a Búsqueda Web (Google Search)', value: 'google_search', checked: true },
-      { name: 'Ejecución de Código en Sandbox', value: 'code_execution', checked: true },
-      { name: 'MCP: Explorador de Archivos', value: 'mcp_file_explorer', checked: true },
-      { name: 'MCP: Administrador de Memoria (Geist)', value: 'mcp_geist_memory', checked: true },
-      { name: 'MCP: Analizador XML-TEI (Humanidades Digitales)', value: 'mcp_xml_tei' },
-      { name: 'MCP: Generador de Gráficos (DataViz)', value: 'mcp_data_viz' },
-      { name: 'Skill: Análisis Intertextual', value: 'skill_intertextual' },
-      { name: 'Skill: Generador de Reportes Corporativos B2B', value: 'skill_b2b_reports' }
-    ]
+  // 5. Hermes Broker (Redis)
+  const useRedis = await confirm({ 
+      message: '¿Deseas activar la Arquitectura Hermes usando Redis para mensajería asíncrona de alto tráfico?',
+      default: true 
+  });
+  let redisUrl = '';
+  if (useRedis) {
+      redisUrl = await input({ message: 'URL de conexión a Redis:', default: 'redis://127.0.0.1:6379' });
+  }
+
+  // 6. Security & Whitelist
+  const authorizedNumbers = await input({
+      message: 'Introduce los números autorizados separados por coma (ej. 573000000000,573110000000):',
+      default: ''
   });
 
-  // 5. Ajuste Inicial Cognitivo del Agente (Geist Tuning)
-  console.log(chalk.magenta(`\n[🧠] Fase de Sincronización Cognitiva (Geist Tuning)`));
-  
-  const userPersona = await select({
-      message: '¿Qué tono o personalidad debe adoptar el agente por defecto?',
-      choices: [
-          { name: 'Analítico y Directo (Consultor B2B / Ingeniero)', value: 'analitico' },
-          { name: 'Académico y Filosófico (Humanidades Digitales / Kojève)', value: 'academico' },
-          { name: 'Conciso y Minimalista (Solo respuestas técnicas / CLI)', value: 'conciso' },
-          { name: 'Asistente Colaborativo y Empático', value: 'empatico' }
-      ]
-  });
+  // 7. Platform Specific Tokens
+  let telegramToken = '';
+  if (platforms.includes('telegram')) {
+      telegramToken = await input({ message: 'Token del Bot de Telegram (BotFather):' });
+  }
 
-  const autoresearchFreq = await select({
-      message: '¿Con qué frecuencia deseas que el agente ejecute el Heartbeat Loop (Automejora)?',
-      choices: [
-          { name: 'Apagado (Solo bajo demanda)', value: '0' },
-          { name: 'Frecuente (Cada 30 minutos)', value: '30' },
-          { name: 'Equilibrado (Cada 1 hora)', value: '60' },
-          { name: 'Ligero (Cada 2 horas)', value: '120' }
-      ]
-  });
+  let discordToken = '';
+  if (platforms.includes('discord')) {
+      discordToken = await input({ message: 'Token del Bot de Discord:' });
+  }
 
-  const agentGoal = await input({
-      message: 'Describe brevemente el propósito principal o el proyecto en el que te asistirá BABYLON.IA:',
-      default: 'Asistencia general, automatización y análisis de datos'
-  });
+  let twitterBearer = '';
+  if (platforms.includes('twitter')) {
+      twitterBearer = await input({ message: 'Bearer Token de la API de X (Twitter):' });
+  }
 
-  // 6. Workspace / Sandbox directory
+  let openwaApiUrl = '', openwaApiKey = '', openwaSessionId = '', publicUrl = '';
+  if (platforms.includes('openwa')) {
+      openwaApiUrl = await input({ message: 'OpenWA API URL:', default: 'http://localhost:2785' });
+      openwaApiKey = await input({ message: 'OpenWA API Key (Opcional):' });
+      openwaSessionId = await input({ message: 'OpenWA Session ID:', default: 'default' });
+      publicUrl = await input({ message: 'URL Pública (ngrok/dominio) para Webhooks (requerido para recibir mensajes):' });
+  }
+
+  // 8. Workspace / Sandbox directory
   const defaultWorkspace = path.join(rootDir, 'workspace');
   let workspaceDir = await input({
-    message: 'Ruta para el Sandbox/Workspace del agente (donde operará con archivos):',
+    message: 'Ruta para el Sandbox/Workspace del agente:',
     default: defaultWorkspace
   });
 
@@ -187,48 +124,6 @@ export async function runOnboard() {
   if (!fs.existsSync(workspaceDir)) {
     fs.mkdirSync(workspaceDir, { recursive: true });
     console.log(chalk.green(`  [+] Carpeta Workspace creada en: ${workspaceDir}`));
-  }
-  
-  // Guardar configuración cognitiva en la Wiki (Reglas Base de inicialización)
-  const wikiDir = path.join(workspaceDir, 'wiki');
-  if (!fs.existsSync(wikiDir)) fs.mkdirSync(wikiDir, { recursive: true });
-  
-  const geistTuningPath = path.join(wikiDir, 'Geist_Tuning.md');
-  const geistTuningContent = `# Configuración Cognitiva Inicial (Geist Tuning)\n\n**Tono/Personalidad:** ${userPersona}\n**Propósito Principal:** ${agentGoal}\n**Heartbeat Loop:** ${autoresearchFreq > 0 ? `Activo (cada ${autoresearchFreq} min)` : 'Inactivo'}\n\n*Esta configuración fue establecida durante el Onboard y dicta la directriz primaria del agente.*`;
-  fs.writeFileSync(geistTuningPath, geistTuningContent, 'utf-8');
-
-  // Asegurar que Index.md existe y referenciar Geist_Tuning
-  const indexPath = path.join(wikiDir, 'Index.md');
-  if (fs.existsSync(indexPath)) {
-      let indexContent = fs.readFileSync(indexPath, 'utf-8');
-      if (!indexContent.includes('[[Geist_Tuning]]')) {
-          indexContent += `\n- [[Geist_Tuning]]\n`;
-          fs.writeFileSync(indexPath, indexContent, 'utf-8');
-      }
-  }
-
-  // Extra configs per platform
-  let telegramToken = '';
-  if (platforms.includes('telegram')) {
-      telegramToken = await input({ message: 'Introduce el Token de tu Bot de Telegram (obtenido en BotFather):' });
-  }
-
-  let twitterBearer = '';
-  if (platforms.includes('twitter')) {
-      twitterBearer = await input({ message: 'Introduce el Bearer Token de la API de X (Twitter):' });
-  }
-
-  if (platforms.includes('whatsapp')) {
-      console.log(chalk.magenta(`\n[📱] Configuración de WhatsApp Web`));
-      const linkWa = await confirm({ message: '¿Deseas enlazar tu cuenta de WhatsApp ahora escaneando el código QR (Recomendado)?' });
-      if (linkWa) {
-          try {
-              const { pairWhatsAppClient } = await import('./whatsapp.js');
-              await pairWhatsAppClient();
-          } catch (e) {
-              console.log(chalk.yellow('\n[!] No se pudo enlazar WhatsApp en este momento. El sistema volverá a intentarlo cuando inicies "babylonia gateway".'));
-          }
-      }
   }
 
   // Save to .env
@@ -240,23 +135,52 @@ OS_TARGET=${environment}
 GEMINI_MODEL=${model}
 USE_GEMINI_CLI_OAUTH=${linkGeminiCLI ? 'true' : 'false'}
 GEMINI_API_KEY=${geminiApiKey}
-
-# Plataformas Activadas (separadas por coma)
+WORKSPACE_DIR=${workspaceDir}
 ENABLED_PLATFORMS=${platforms.join(',')}
 
-# Entorno de Trabajo
-WORKSPACE_DIR=${workspaceDir}
+# Arquitectura Hermes
+REDIS_URL=${redisUrl}
 
-# Herramientas y Skills
-ENABLED_SKILLS=${features.join(',')}
+# Seguridad
+AUTHORIZED_NUMBERS=${authorizedNumbers}
 
-# Tokens Específicos
+# Integraciones Específicas
 TELEGRAM_BOT_TOKEN=${telegramToken}
+DISCORD_TOKEN=${discordToken}
 TWITTER_BEARER_TOKEN=${twitterBearer}
+OPENWA_API_URL=${openwaApiUrl}
+OPENWA_API_KEY=${openwaApiKey}
+OPENWA_SESSION_ID=${openwaSessionId}
+PUBLIC_URL=${publicUrl}
   `.trim();
 
   fs.writeFileSync(envPath, envContent, 'utf-8');
-  console.log(chalk.green(`\n[✓] Configuración guardada exitosamente en ${envPath}`));
-  console.log(chalk.magenta(`\nEl Agente BABYLON.IA está configurado. Inicia el motor usando:`));
-  console.log(chalk.cyan(`  babylonia gateway\n`));
+  console.log(chalk.green(`\n[✓] Configuración base guardada exitosamente en ${envPath}`));
+
+  // 9. QR Linking Process for active platforms
+  if (platforms.includes('whatsapp')) {
+      console.log(chalk.magenta(`\n[📱] Emparejamiento de WhatsApp Web (whatsapp-web.js)`));
+      const linkWa = await confirm({ message: '¿Deseas escanear el código QR de WhatsApp ahora?' });
+      if (linkWa) {
+          try {
+              const { pairWhatsAppClient } = await import('./whatsapp.js');
+              await pairWhatsAppClient();
+          } catch (e) {
+              console.log(chalk.yellow('\n[!] No se pudo enlazar WhatsApp en este momento.'));
+          }
+      }
+  }
+
+  if (platforms.includes('wechat')) {
+      console.log(chalk.magenta(`\n[💬] Emparejamiento de WeChat`));
+      console.log(chalk.gray(`Inicia el motor "babylonia gateway" para desplegar el QR de WeChat interactivo en la TUI.`));
+  }
+
+  if (platforms.includes('openwa')) {
+      console.log(chalk.magenta(`\n[🌐] Despliegue OpenWA`));
+      console.log(chalk.gray(`Recuerda iniciar tu contenedor OpenWA y escanear el QR desde el Dashboard de OpenWA o vía API en ${openwaApiUrl}/api/sessions/${openwaSessionId}/qr`));
+  }
+
+  console.log(chalk.magenta(`\nEl Agente BABYLON.IA está configurado. Inicia el motor Omni-Channel usando:`));
+  console.log(chalk.cyan.bold(`  babylonia gateway\n`));
 }
