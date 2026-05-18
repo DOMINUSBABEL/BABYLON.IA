@@ -36,20 +36,23 @@ export class MetacognitiveLoop {
         console.log('🧠 [Metacognición] Iniciando síntesis dialéctica de logs históricos...');
         try {
             const rawLog = await fs.readFile(this.currentLogFile, 'utf-8').catch(() => null);
-            
+
             if (!rawLog || rawLog.length < 500) {
                 console.log('⏳ [Metacognición] Masa crítica insuficiente para síntesis.');
                 return;
             }
 
             const prompt = `Analiza este registro de interacciones del bucle ReAct.
-Aplica la Síntesis de Hegel y la Restricción Conservadora: identifica qué resoluciones de herramientas o análisis fueron efectivas y extrae un principio de optimización universalizable para futuras interacciones.
-Genera solo la regla final en formato Markdown.
-Si la evaluación NO revela un conocimiento técnico universalizable o la optimización no es vital y probada empíricamente, responde EXACTAMENTE con la constante NO_UPDATE.
+Aplica la Síntesis de Hegel y la Restricción Conservadora: identifica qué resoluciones de herramientas o análisis fueron efectivas y extrae un principio de optimización arquitectónica o cognitiva universalizable para futuras interacciones.
+Aplica la Psicohistoria (Asimov): ¿Cómo afecta este patrón a largo plazo a la base de conocimiento y la experiencia del usuario?
+Genera solo la regla final en formato Markdown, bajo los siguientes criterios:
+1. Universalidad: La regla debe aplicar a futuros casos similares.
+2. Rigor Lógico: Debe ser inequívoca y mejorar el discernimiento del sistema.
+3. Restricción Conservadora: Si la evaluación no revela un conocimiento técnico universalizable o la optimización no es vital y probada empíricamente, responde EXACTAMENTE con la constante NO_UPDATE.
 
 Registro:
 ${rawLog}`;
-            
+
             // Ejecutamos la tarea a través del motor ReAct para que también razone su propia mejora
             const synthesis = await processTask(prompt, () => {});
 
@@ -68,7 +71,7 @@ ${rawLog}`;
             await fs.appendFile(this.synthesisFile, `\n## Síntesis - ${timestamp}\n${synthesis}\n`);
             await geistVault.store(`Tuning_${Date.now()}`, synthesis);
             
-            console.log('✨ [Metacognición] Bóveda Geist RAG actualizada exitosamente con nuevo conocimiento universalizable.');
+            console.log('✨ [Metacognición] Bóveda Geist RAG actualizada exitosamente con nuevo conocimiento universalizable (Psicohistoria aplicada).');
         } catch (error) {
             console.error('❌ [Metacognición] Error en el ciclo:', error);
         }

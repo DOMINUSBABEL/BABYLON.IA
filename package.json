@@ -1,6 +1,6 @@
 {
   "name": "babylonia",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Agente Autónomo Multi-Canal (WhatsApp + Gemini OAuth) con Arquitectura Geist",
   "main": "index.js",
   "bin": {

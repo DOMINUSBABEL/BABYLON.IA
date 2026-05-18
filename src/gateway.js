@@ -60,6 +60,9 @@ class Gateway {
                 }
                 
                 let fileName = event.media.filename;
+                if (fileName) {
+                    fileName = path.basename(fileName);
+                }
                 if (!fileName) {
                     let ext = '';
                     if (event.media.mimetype) {
@@ -68,9 +71,16 @@ class Gateway {
                         else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') ext = '.docx';
                         else if (mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') ext = '.xlsx';
                         else if (mimeType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation') ext = '.pptx';
+                        else if (mimeType === 'text/plain') ext = '.txt';
+                        else if (mimeType === 'text/csv') ext = '.csv';
+                        else if (mimeType === 'application/json') ext = '.json';
+                        else if (mimeType === 'text/markdown') ext = '.md';
+                        else if (mimeType === 'text/html') ext = '.html';
+                        else if (mimeType === 'application/xml' || mimeType === 'text/xml') ext = '.xml';
                         else if (mimeType.startsWith('image/')) ext = '.' + mimeType.split('/')[1];
                         else if (mimeType.startsWith('audio/')) ext = '.' + mimeType.split('/')[1].replace('ogg; codecs=opus', 'ogg');
                         else if (mimeType.startsWith('video/')) ext = '.' + mimeType.split('/')[1];
+                        else ext = '.bin'; // Fallback
                     }
                     fileName = `media_${Date.now()}${ext.replace(/[^a-zA-Z0-9.]/g, '')}`;
                 }
@@ -109,11 +119,14 @@ class Gateway {
             if (commandStr.toLowerCase().startsWith('enviar ')) {
                 const filePathStr = commandStr.replace(/enviar /i, '').trim();
                 const cleanPath = filePathStr.replace(/^"|"$/g, '');
+                const workspaceDir = path.resolve(process.cwd(), 'workspace');
+                const resolvedPath = path.resolve(workspaceDir, cleanPath);
+                const safePath = (resolvedPath === workspaceDir || resolvedPath.startsWith(workspaceDir + path.sep)) ? resolvedPath : null;
                 
-                if (fs.existsSync(cleanPath)) {
-                    return { type: 'file', path: cleanPath, caption: '*Geist File Extractor:*\nAquí tienes el documento solicitado de tu PC.' };
+                if (safePath && fs.existsSync(safePath)) {
+                    return { type: 'file', path: safePath, caption: '*Geist File Extractor:*\nAquí tienes el documento solicitado de tu PC.' };
                 } else {
-                    return { type: 'error', text: `❌ *Aporía Encontrada:*\nEl archivo no existe en la ruta local proporcionada:\n_${cleanPath}_` };
+                    return { type: 'error', text: `❌ *Aporía Encontrada:*\nEl archivo no existe en la ruta local proporcionada o no tienes permisos:\n_${cleanPath}_` };
                 }
             }
         }
