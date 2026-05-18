@@ -12,8 +12,9 @@ Al iniciar `babylonia onboard` o `babylonia models`, el CLI te ofrecerá integra
 ### 1. Google Gemini (Por Defecto)
 El sistema está construido primariamente sobre las directivas de Google GenAI.
 - **`gemini-3.1-pro-preview`**: Máximo razonamiento lógico actual.
+- **`gemini-3.1-flash`**: Equilibrio perfecto entre velocidad e inteligencia.
 - **`gemini-3.0-pro`**: Version estable con altas capacidades lógicas.
-- **`gemini-2.5-pro`** y **`gemini-2.5-flash`**: Equilibrio velocidad/coste.
+- **`gemini-2.5-pro`** y **`gemini-2.5-flash`**: Modelos legados estables de uso general.
 - **`gemini-2.0-flash-lite-preview-02-05`**: Ultra ligero, ideal para despliegues masivos.
 
 ### 2. Anthropic Claude (Vía API o Bridge)

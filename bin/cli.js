@@ -220,6 +220,7 @@ program
     const modelChoices = [
         new Separator('--- Google Gemini ---'),
         { name: 'gemini-3.1-pro-preview (Súper-Inteligencia, máximo razonamiento) [Recomendado]', value: 'gemini-3.1-pro-preview' },
+        { name: 'gemini-3.1-flash (Equilibrio perfecto velocidad/inteligencia)', value: 'gemini-3.1-flash' },
         { name: 'gemini-3.0-pro (Avanzado, reasoning superior)', value: 'gemini-3.0-pro' },
         { name: 'gemini-2.5-pro (Avanzado, razonamiento complejo)', value: 'gemini-2.5-pro' },
         { name: 'gemini-2.5-flash (Rápido, respuestas instantáneas)', value: 'gemini-2.5-flash' },
