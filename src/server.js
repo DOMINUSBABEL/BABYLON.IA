@@ -160,6 +160,7 @@ agentEvents.on('whatsapp_ready', () => {
 // Sincronizar eventos de WhatsApp hacia el Dashboard
 agentEvents.on('whatsapp_command_start', (cmd) => {
     io.emit('agent_status', 'Pensando...');
+    if (process.send) process.send({ type: 'tui_layout', layout: 'processing' });
 });
 agentEvents.on('whatsapp_progress', (progressText) => {
     io.emit('agent_progress', progressText);
@@ -167,10 +168,12 @@ agentEvents.on('whatsapp_progress', (progressText) => {
 agentEvents.on('whatsapp_response', (response) => {
     io.emit('agent_response', response);
     io.emit('agent_status', 'En espera de directivas');
+    if (process.send) process.send({ type: 'tui_layout', layout: 'default' });
 });
 agentEvents.on('whatsapp_error', (error) => {
     io.emit('agent_error', error);
     io.emit('agent_status', 'Error');
+    if (process.send) process.send({ type: 'tui_layout', layout: 'error' });
 });
 
 // Suscripción a Hermes para canales TUI y Dashboard Web
@@ -182,18 +185,22 @@ hermes.subscribeOutbound((responseObj) => {
             io.emit('agent_response', responseObj.text);
             io.emit('agent_status', 'En espera de directivas');
             console.log(chalk.green('  -> Síntesis enviada al Dashboard Web.'));
+            if (process.send) process.send({ type: 'tui_layout', layout: 'default' });
         } else if (responseObj.type === 'error') {
             io.emit('agent_error', responseObj.text);
             io.emit('agent_status', 'Error');
+            if (process.send) process.send({ type: 'tui_layout', layout: 'error' });
         }
     }
     
     if (responseObj.channel === 'tui') {
         if (responseObj.type === 'progress') {
             console.log(chalk.gray(`• ${responseObj.text}`));
+            if (process.send) process.send({ type: 'tui_layout', layout: 'processing' });
         } else if (responseObj.type === 'text' || responseObj.type === 'error') {
             console.log(chalk.green('  -> Síntesis natural generada (Terminal).'));
             console.log(`\n*BABYLON.IA (TUI)*:\n${responseObj.text}\n`);
+            if (process.send) process.send({ type: 'tui_layout', layout: 'default' });
             if (rlInterface && !rlInterface.closed) { try { if (rlInterface.prompt) rlInterface.prompt(); } catch(e) { rlInterface = null; } }
         }
     }
