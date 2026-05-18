@@ -13,8 +13,10 @@ import { getGeminiOAuthToken } from './auth.js';
 import { initWhatsAppClient } from './whatsapp.js';
 import { initTelegramBot } from './telegram.js';
 import { initTwitterBot } from './twitter.js';
+import { initOpenWABot, initOpenWAWebhook } from './openwa.js';
 import { gateway } from './gateway.js';
-import { processTask } from './agent_core.js';
+import { processTask, initHermesConsumer } from './agent_core.js';
+import { hermes } from './hermes_broker.js';
 import dotenv from 'dotenv';
 import boxen from 'boxen';
 import logUpdate from 'log-update';
@@ -112,34 +114,19 @@ function initTerminalUI() {
         console.log(chalk.cyan(`\n[~] Tesis Natural Recibida (TUI Terminal): ${input}`));
 
         try {
-            // Buffer to store reasoning steps for TUI panel
-            let reasoningSteps = [];
-
-            const response = await processTask(input, (progressText) => {
-                reasoningSteps.push(`• ${progressText}`);
-                io.emit('agent_progress', progressText); // Sincronización con el Dashboard
-
-                // Re-render the reasoning box dynamically using log-update
-                const reasoningBox = boxen(reasoningSteps.join('\n'), {
-                    title: chalk.hex('#ffd700').bold('🧠 Flujo de Razonamiento Geist'),
-                    titleAlignment: 'left',
-                    padding: 1,
-                    margin: { top: 1, bottom: 1 },
-                    borderColor: '#0000ff',
-                    borderStyle: 'round'
-                });
-
-                logUpdate(reasoningBox);
+            const ingestResult = await gateway.ingestEvent({
+                text: input,
+                channel: 'tui',
+                from: 'internal',
+                to: 'internal'
             });
 
-            // Finalizar la actualización en vivo
-            logUpdate.done();
-
-            console.log(chalk.green('  -> Síntesis natural generada (Terminal).'));
-            console.log(`\n*BABYLON.IA (TUI)*:\n${response}\n`);
+            if (ingestResult.type === 'error' || ingestResult.type === 'text') {
+                console.log(`\n*BABYLON.IA (TUI)*:\n${ingestResult.text}\n`);
+            }
             
             // Sincronizar con WhatsApp
-            agentEvents.emit('broadcast_whatsapp', `*[Directiva desde Terminal TUI]*\n_Tesis:_ ${input}\n\n*Síntesis:*\n${response}`);
+            agentEvents.emit('broadcast_whatsapp', `*[Directiva desde Terminal TUI]*\n_Tesis:_ ${input}`);
         } catch (error) {
             console.error(chalk.red(`[Error Procesando Tarea]: ${error.message}`));
         }
@@ -173,6 +160,7 @@ agentEvents.on('whatsapp_ready', () => {
 // Sincronizar eventos de WhatsApp hacia el Dashboard
 agentEvents.on('whatsapp_command_start', (cmd) => {
     io.emit('agent_status', 'Pensando...');
+    if (process.send) process.send({ type: 'tui_layout', layout: 'processing' });
 });
 agentEvents.on('whatsapp_progress', (progressText) => {
     io.emit('agent_progress', progressText);
@@ -180,10 +168,42 @@ agentEvents.on('whatsapp_progress', (progressText) => {
 agentEvents.on('whatsapp_response', (response) => {
     io.emit('agent_response', response);
     io.emit('agent_status', 'En espera de directivas');
+    if (process.send) process.send({ type: 'tui_layout', layout: 'default' });
 });
 agentEvents.on('whatsapp_error', (error) => {
     io.emit('agent_error', error);
     io.emit('agent_status', 'Error');
+    if (process.send) process.send({ type: 'tui_layout', layout: 'error' });
+});
+
+// Suscripción a Hermes para canales TUI y Dashboard Web
+hermes.subscribeOutbound((responseObj) => {
+    if (responseObj.channel === 'dashboard' || responseObj.channel === 'heartbeat') {
+        if (responseObj.type === 'progress') {
+            io.emit('agent_progress', responseObj.text);
+        } else if (responseObj.type === 'text') {
+            io.emit('agent_response', responseObj.text);
+            io.emit('agent_status', 'En espera de directivas');
+            console.log(chalk.green('  -> Síntesis enviada al Dashboard Web.'));
+            if (process.send) process.send({ type: 'tui_layout', layout: 'default' });
+        } else if (responseObj.type === 'error') {
+            io.emit('agent_error', responseObj.text);
+            io.emit('agent_status', 'Error');
+            if (process.send) process.send({ type: 'tui_layout', layout: 'error' });
+        }
+    }
+    
+    if (responseObj.channel === 'tui') {
+        if (responseObj.type === 'progress') {
+            console.log(chalk.gray(`• ${responseObj.text}`));
+            if (process.send) process.send({ type: 'tui_layout', layout: 'processing' });
+        } else if (responseObj.type === 'text' || responseObj.type === 'error') {
+            console.log(chalk.green('  -> Síntesis natural generada (Terminal).'));
+            console.log(`\n*BABYLON.IA (TUI)*:\n${responseObj.text}\n`);
+            if (process.send) process.send({ type: 'tui_layout', layout: 'default' });
+            if (rlInterface && !rlInterface.closed) { try { if (rlInterface.prompt) rlInterface.prompt(); } catch(e) { rlInterface = null; } }
+        }
+    }
 });
 
 io.on('connection', (socket) => {
@@ -510,32 +530,20 @@ io.on('connection', (socket) => {
         io.emit('agent_status', 'Pensando...');
         
         try {
-            let webReasoningSteps = [];
-            const response = await processTask(cmd, (progressText) => {
-                webReasoningSteps.push(`• ${progressText}`);
-
-                // Re-render the reasoning box dynamically using log-update for web requests too
-                const reasoningBox = boxen(webReasoningSteps.join('\n'), {
-                    title: chalk.hex('#ffd700').bold('🧠 Flujo de Razonamiento Geist (Web)'),
-                    titleAlignment: 'left',
-                    padding: 1,
-                    margin: { top: 1, bottom: 1 },
-                    borderColor: '#0000ff',
-                    borderStyle: 'round'
-                });
-
-                logUpdate(reasoningBox);
-                io.emit('agent_progress', progressText);
+            const ingestResult = await gateway.ingestEvent({
+                text: cmd,
+                channel: 'dashboard',
+                from: 'dashboard',
+                to: 'dashboard'
             });
-            
-            logUpdate.done();
 
-            console.log(chalk.green('  -> Síntesis generada (Web).'));
-            io.emit('agent_response', response);
-            io.emit('agent_status', 'En espera de directivas');
+            if (ingestResult.type === 'error' || ingestResult.type === 'text') {
+                 io.emit('agent_response', ingestResult.text);
+                 io.emit('agent_status', 'En espera de directivas');
+            }
             
             // Sincronizar con WhatsApp
-            agentEvents.emit('broadcast_whatsapp', `*[Directiva desde Dashboard Web]*\n_Tesis:_ ${cmd}\n\n*Síntesis:*\n${response}`);
+            agentEvents.emit('broadcast_whatsapp', `*[Directiva desde Dashboard Web]*\n_Tesis:_ ${cmd}`);
             
         } catch (error) {
             console.error(chalk.red(`[Error Procesando Tarea]: ${error.message}`));
@@ -555,6 +563,9 @@ server.listen(PORT, '0.0.0.0', async () => {
     if (process.env.BABYLON_MODE === 'gateway') {
         const spinner = (await import('ora')).default('Verificando Conciencia Geist y Credenciales OAuth de Gemini...').start();
         try {
+            await hermes.init();
+            initHermesConsumer();
+            
             if (process.env.USE_GEMINI_CLI_OAUTH !== 'false') {
                 try {
                     const creds = await getGeminiOAuthToken();

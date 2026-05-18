@@ -5,6 +5,7 @@ import chalk from 'chalk';
 import fs from 'fs';
 import path from 'path';
 import { gateway } from './gateway.js';
+import { hermes } from './hermes_broker.js';
 
 export function initWhatsAppClient(agentEvents = null) {
     console.log(chalk.cyan('Inicializando el navegador Headless de WhatsApp Web (puede tomar unos segundos)...'));
@@ -178,28 +179,44 @@ export function initWhatsAppClient(agentEvents = null) {
             if (agentEvents) agentEvents.emit('whatsapp_command_start', msgText);
 
             try {
-                const responseObj = await gateway.handleEvent(eventData, (progressText) => {
-                    console.log(chalk.gray(`     [Geist] ${progressText}`));
-                    if (agentEvents) agentEvents.emit('whatsapp_progress', progressText);
-                });
+                const ingestResult = await gateway.ingestEvent(eventData);
 
-                if (responseObj.type === 'file' && responseObj.path) {
-                    try {
-                        const outMedia = MessageMedia.fromFilePath(responseObj.path);
-                        await client.sendMessage(msg.from, outMedia, { caption: responseObj.caption });
-                        if (agentEvents) agentEvents.emit('whatsapp_response', 'Archivo enviado');
-                    } catch (err) {
-                        await statusMsg.reply(`❌ *Error del Sistema:*\n${err.message}`);
-                        if (agentEvents) agentEvents.emit('whatsapp_error', err.message);
+                if (ingestResult.type === 'error' || ingestResult.type === 'file' || ingestResult.type === 'text') {
+                    if (ingestResult.type === 'file' && ingestResult.path) {
+                        try {
+                            const outMedia = MessageMedia.fromFilePath(ingestResult.path);
+                            await client.sendMessage(msg.from, outMedia, { caption: ingestResult.caption });
+                            if (agentEvents) agentEvents.emit('whatsapp_response', 'Archivo enviado');
+                        } catch (err) {
+                            await statusMsg.reply(`❌ *Error del Sistema:*\n${err.message}`);
+                            if (agentEvents) agentEvents.emit('whatsapp_error', err.message);
+                        }
+                    } else if (ingestResult.text) {
+                        await statusMsg.reply((eventData.isCommand ? '*BABYLON.IA (System)*:\n' : '') + ingestResult.text);
+                        if (agentEvents) agentEvents.emit('whatsapp_response', ingestResult.text);
                     }
-                } else if (responseObj.text) {
-                    await statusMsg.reply((eventData.isCommand ? '*BABYLON.IA (System)*:\n' : '') + responseObj.text);
-                    if (agentEvents) agentEvents.emit('whatsapp_response', responseObj.text);
                 }
-
             } catch (error) {
                 await statusMsg.reply(`❌ *Error cognitivo:*\n_Detalle: ${error.message}_`);
                 if (agentEvents) agentEvents.emit('whatsapp_error', error.message);
+            }
+        });
+
+        hermes.subscribeOutbound(async (responseObj) => {
+            if (responseObj.channel === 'whatsapp') {
+                try {
+                    if (responseObj.type === 'progress') {
+                        if (agentEvents) agentEvents.emit('whatsapp_progress', responseObj.text);
+                    } else if (responseObj.type === 'text') {
+                        await client.sendMessage(responseObj.to, responseObj.text);
+                        if (agentEvents) agentEvents.emit('whatsapp_response', responseObj.text);
+                    } else if (responseObj.type === 'error') {
+                        await client.sendMessage(responseObj.to, responseObj.text);
+                        if (agentEvents) agentEvents.emit('whatsapp_error', responseObj.text);
+                    }
+                } catch(e) {
+                    console.error(chalk.red(`Error enviando mensaje asíncrono a WPP: ${e.message}`));
+                }
             }
         });
 
@@ -240,8 +257,10 @@ export function pairWhatsAppClient() {
         });
 
         client.on('qr', (qr) => {
+            console.clear();
             console.log(chalk.yellow('\n[!] Escanea el siguiente código QR con tu aplicación de WhatsApp (Dispositivos Vinculados):'));
             qrcode.generate(qr, { small: true });
+            console.log(chalk.gray('\nEsperando autenticación...'));
         });
 
         client.on('ready', async () => {
