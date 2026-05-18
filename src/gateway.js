@@ -1,13 +1,14 @@
 import chalk from 'chalk';
 import fs from 'fs';
 import path from 'path';
-import { processTask } from './agent_core.js';
+import crypto from 'crypto';
 import { pluginManager } from './plugins/PluginManager.js';
+import { hermes } from './hermes_broker.js';
 
 /**
  * Unificación de Canales (API Gateway / Middleware)
  * Centraliza la recepción de eventos, validación de autorización, 
- * descarga de media y enrutamiento hacia el core del agente.
+ * descarga de media y enrutamiento hacia el core del agente vía Hermes.
  */
 class Gateway {
     constructor() {
@@ -16,10 +17,8 @@ class Gateway {
 
     /**
      * Valida si un evento proveniente de cualquier canal está autorizado para interactuar con el agente.
-     * Implementa la Primera Ley (Preservación del Host) homologada.
      */
     isAuthorized(event) {
-        // Eventos internos, Dashboard o terminal asumen autorización por defecto si no envían 'from'
         if (!event.from || event.from === 'internal' || event.from === 'dashboard') return true;
 
         const myId = event.myId || '';
@@ -36,16 +35,16 @@ class Gateway {
     }
 
     /**
-     * Procesa un evento unificado proveniente de cualquier canal.
+     * Procesa un evento unificado proveniente de cualquier canal y lo inyecta a Hermes.
      * @param {Object} event { text, hasMedia, media, channel, author, from, to, isCommand, isFromMe, myId }
-     * @param {Function} updateProgress Callback para el progreso
      */
-    async handleEvent(event, updateProgress) {
+    async ingestEvent(event) {
         if (!this.isAuthorized(event)) {
             console.log(chalk.red(`[Gateway] Evento bloqueado (No Autorizado) desde: ${event.from}`));
             return { type: 'error', text: '⚠️ No autorizado.' };
         }
 
+        event.eventId = event.eventId || crypto.randomUUID();
         let finalPrompt = event.text || '';
 
         // Descarga y formateo de Media (Común para todos los canales si proveen el objeto media)
@@ -100,7 +99,7 @@ class Gateway {
             }
 
             if (commandStr.toLowerCase() === 'status') {
-                return { type: 'text', text: '🟢 *BABYLON.IA Status:*\n- Motor Gemini CLI: ONLINE\n- Token OAuth: ACTIVO\n- Bucle Dialéctico: Operativo.\n- Entorno: Gateway Middleware' };
+                return { type: 'text', text: '🟢 *BABYLON.IA Status:*\n- Motor Gemini CLI: ONLINE\n- Token OAuth: ACTIVO\n- Bucle Dialéctico: Operativo.\n- Entorno: Hermes Gateway Middleware' };
             }
 
             if (commandStr.toLowerCase().startsWith('enviar ')) {
@@ -115,9 +114,12 @@ class Gateway {
             }
         }
 
-        // Procesamiento en Agent Core
-        const response = await processTask(finalPrompt, updateProgress);
-        return { type: 'text', text: response };
+        event.finalPrompt = finalPrompt;
+
+        // Inyectar el evento en Hermes Broker para procesamiento asíncrono en Agent Core
+        await hermes.publishInbound(event);
+        
+        return { status: 'queued', eventId: event.eventId };
     }
 }
 
