@@ -255,6 +255,10 @@ PUBLIC_URL=${publicUrl}
   fs.writeFileSync(envPath, envContent, 'utf-8');
   console.log(chalk.green(`\n[✓] Configuración base guardada exitosamente en ${envPath}`));
 
+  // Recargar variables de entorno para los scripts de emparejamiento
+  const dotenv = await import('dotenv');
+  dotenv.default.config({ path: envPath, override: true });
+
   // 9. QR Linking Process for active platforms
   if (platforms.includes('whatsapp')) {
       console.log(chalk.magenta(`\n[📱] Emparejamiento de WhatsApp Web (whatsapp-web.js)`));

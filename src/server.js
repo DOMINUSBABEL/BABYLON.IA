@@ -151,6 +151,10 @@ agentEvents.on('qr_code', (qrCodeBase64) => {
     io.emit('whatsapp_qr', qrCodeBase64);
 });
 
+agentEvents.on('qr_terminal', (qrStr) => {
+    if (process.send) process.send({ type: 'qr_terminal', data: qrStr });
+});
+
 agentEvents.on('whatsapp_ready', () => {
     isWhatsappReady = true;
     lastQrCode = null; // Ya no necesitamos el QR

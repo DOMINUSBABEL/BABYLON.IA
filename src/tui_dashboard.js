@@ -169,6 +169,37 @@ export class FuturisticTUI {
         this.screen.render();
     }
 
+    showQRBox(qrStr) {
+        if (this.qrBox) {
+            this.screen.remove(this.qrBox);
+        }
+        this.qrBox = blessed.box({
+            parent: this.screen,
+            top: 'center',
+            left: 'center',
+            width: '80%',
+            height: '80%',
+            content: chalk.yellow('Escanea este QR para enlazar WhatsApp:\n\n') + qrStr + chalk.gray('\n\n(Presiona X para cerrar este diálogo)'),
+            border: { type: 'line', fg: 'yellow' },
+            style: { bg: 'black', fg: 'white' },
+            align: 'center',
+            valign: 'middle',
+            scrollable: true,
+            alwaysScroll: true
+        });
+        
+        // Agregar atajo 'x' a la pantalla globalmente temporal
+        this.screen.onceKey(['x', 'X'], (ch, key) => {
+            if (this.qrBox) {
+                this.screen.remove(this.qrBox);
+                this.qrBox = null;
+                this.screen.render();
+            }
+        });
+        
+        this.screen.render();
+    }
+
     startServer() {
         if (!this.rootDir) return;
 
@@ -183,6 +214,8 @@ export class FuturisticTUI {
         this.serverProcess.on('message', (msg) => {
             if (msg.type === 'tui_layout') {
                 this.switchToLayout(msg.layout);
+            } else if (msg.type === 'qr_terminal') {
+                this.showQRBox(msg.data);
             }
         });
 
