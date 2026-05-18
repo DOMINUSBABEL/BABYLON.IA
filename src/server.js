@@ -562,7 +562,8 @@ io.on('connection', (socket) => {
                 text: cmd,
                 channel: 'dashboard',
                 from: 'dashboard',
-                to: 'dashboard'
+                to: 'dashboard',
+                isCommand: cmd.toLowerCase().startsWith('!geist')
             });
 
             if (ingestResult.type === 'error' || ingestResult.type === 'text') {

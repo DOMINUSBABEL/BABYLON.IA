@@ -365,12 +365,42 @@ socket.on('agent_error', (errorMsg) => {
 });
 
 // Compat map
-socket.on('whatsapp_qr', (url) => socket.emit('qr_code', url));
-socket.on('whatsapp_status', (status) => { if(status==='connected') socket.emit('whatsapp_ready'); });
+socket.on('whatsapp_qr', (url) => {
+    if (qrSpinner) qrSpinner.classList.add('hidden');
+    if (qrImage) {
+        qrImage.src = url;
+        qrImage.classList.remove('hidden');
+    }
+    if (waStatusEl) {
+        waStatusEl.innerHTML = '<i class="fa-solid fa-mobile-screen text-yellow-500 mr-1 animate-pulse"></i> Escanear QR';
+        waStatusEl.className = 'text-yellow-500 font-bold';
+    }
+    appendLog('Matriz QR generada. Esperando enlace de dispositivo...', 'info');
+});
+
+socket.on('whatsapp_status', (status) => { 
+    if(status === 'connected') {
+        if (qrContainer) qrContainer.classList.add('hidden');
+        if (waConnectedState) {
+            waConnectedState.classList.remove('hidden');
+            waConnectedState.classList.add('flex');
+        }
+        if (waStatusEl) {
+            waStatusEl.innerHTML = '<i class="fa-solid fa-link text-primary-400 mr-1"></i> Enlazado';
+            waStatusEl.className = 'text-primary-400 font-bold glow-text';
+        }
+    } 
+});
+
 socket.on('system_log', (msg) => appendLog(msg, 'system'));
 socket.on('system_error', (msg) => appendLog(msg, 'error'));
 socket.on('agent_progress', (msg) => appendReasoning(msg));
-socket.on('agent_response', (msg) => socket.emit('agent_result', msg));
+
+socket.on('agent_response', (msg) => {
+    appendLog('Dialéctica concluida. Síntesis generada.', 'success');
+    appendReasoning(`[SÍNTESIS FINAL EXITOSA]\n${msg}`);
+    appendLog(`\n${msg}\n`, 'info');
+});
 
 // UI Events
 if (clearBtn) {
