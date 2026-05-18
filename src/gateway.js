@@ -27,9 +27,13 @@ class Gateway {
         const authorClean = event.author || '';
         const isFromMe = event.isFromMe || false;
 
+        // Limpiar sufijos como @c.us o :1 para homologar autorizaciones
+        const fromNumber = fromClean.split('@')[0].split(':')[0];
+        const authorNumber = authorClean.split('@')[0].split(':')[0];
+
         const isMeToMe = (fromClean === myId && toClean === myId);
-        const isDirectToMeFromAuthorized = toClean === myId && this.AUTHORIZED_NUMBERS.includes(fromClean) && !isFromMe;
-        const isCommandInOtherChat = event.isCommand && (isFromMe || this.AUTHORIZED_NUMBERS.includes(fromClean) || (authorClean && this.AUTHORIZED_NUMBERS.includes(authorClean)));
+        const isDirectToMeFromAuthorized = toClean === myId && this.AUTHORIZED_NUMBERS.includes(fromNumber) && !isFromMe;
+        const isCommandInOtherChat = event.isCommand && (isFromMe || this.AUTHORIZED_NUMBERS.includes(fromNumber) || (authorClean && this.AUTHORIZED_NUMBERS.includes(authorNumber)));
 
         return isMeToMe || isDirectToMeFromAuthorized || isCommandInOtherChat;
     }

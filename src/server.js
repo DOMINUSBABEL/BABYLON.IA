@@ -13,6 +13,7 @@ import { getGeminiOAuthToken } from './auth.js';
 import { initWhatsAppClient } from './whatsapp.js';
 import { initTelegramBot } from './telegram.js';
 import { initTwitterBot } from './twitter.js';
+import { initOpenWABot, initOpenWAWebhook } from './openwa.js';
 import { gateway } from './gateway.js';
 import { processTask, initHermesConsumer } from './agent_core.js';
 import { hermes } from './hermes_broker.js';
