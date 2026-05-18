@@ -38,11 +38,13 @@ export class FuturisticTUI {
         // 0. ASCII Brand Header
         this.headerBox = this.grid.set(0, 0, 3, 12, blessed.box, {
             content: chalk.hex('#ffd700').bold(`
-   ___   _   __ __   _    ____ _  __   ____   ___ 
-  / _ ) / | / // /  / |  / __// |/ /  /  _ \\ / _ |
- / _  |/ /| // /__ / /| |\\ \\ /    /  _\\ \\  / __ |
-/____//_/ |_//____//_/ |_/___//_/|_/  /___/ /_/ |_|
-            ::: ARCHITECTURE GEIST :::
+                              /\\^/\\
+                             |::|::|
+                            < ++|++ >
+                           /=========\\
+                          /+++++++++++\\
+                         /=============\\
+                      [ DATA NEXUS GEIST ]
             `),
             align: 'center',
             valign: 'middle',
