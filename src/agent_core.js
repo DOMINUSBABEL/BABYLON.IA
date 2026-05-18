@@ -9,6 +9,7 @@ import util from 'util';
 import { GoogleGenAI } from '@google/genai';
 import { getDialecticalPrompt } from './system_prompt.js';
 import { toolsDefinition, executeTool } from './tools_registry.js';
+import { hermes } from './hermes_broker.js';
 
 const execPromise = util.promisify(exec);
 
@@ -194,4 +195,38 @@ export async function processTask(prompt, updateProgress) {
 
     memory.heartbeat(prompt, result);
     return result;
+}
+
+export function initHermesConsumer() {
+    hermes.subscribeInbound(async (eventData) => {
+        try {
+            const finalPrompt = eventData.finalPrompt || eventData.text;
+            
+            const response = await processTask(finalPrompt, (progressText) => {
+                hermes.publishOutbound({
+                    type: 'progress',
+                    eventId: eventData.eventId,
+                    text: progressText,
+                    channel: eventData.channel,
+                    to: eventData.from
+                });
+            });
+            
+            hermes.publishOutbound({
+                type: 'text',
+                text: response,
+                eventId: eventData.eventId,
+                channel: eventData.channel,
+                to: eventData.from
+            });
+        } catch (error) {
+            hermes.publishOutbound({
+                type: 'error',
+                text: `❌ *Error cognitivo:*\n_Detalle: ${error.message}_`,
+                eventId: eventData.eventId,
+                channel: eventData.channel,
+                to: eventData.from
+            });
+        }
+    });
 }
