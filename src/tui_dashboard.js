@@ -96,14 +96,22 @@ export class FuturisticTUI {
         });
         focusable.push(this.logPanel);
 
-        // 5. Interactive Terminal Input (Textbox) (Overlaid at bottom if needed, or mapped to keys)
-        // We will capture global typing for direct commands if not focused on list/log
+        // 5. Interactive Terminal Input (Textbox)
         this.inputBox = blessed.textbox({
             parent: this.screen,
-            bottom: 0, left: 0, width: '100%', height: 1,
-            keys: true, inputOnFocus: true,
-            style: { fg: 'white', bg: 'blue' }
+            bottom: 0,
+            left: 0,
+            width: '100%',
+            height: 3,
+            label: ' DIRECTIVA DEL USUARIO (Presiona Tab para enfocarte aquí) ',
+            keys: true,
+            inputOnFocus: true,
+            border: { type: "line", fg: "yellow" },
+            style: { fg: 'white', bg: 'black', focus: { border: { fg: 'cyan' }, bg: '#050a0f' } }
         });
+
+        // Ensure log panel doesn't overlap the input box
+        this.logPanel.height = '100%-3'; // We adjust height to make room for the 3-line input box
 
         this.screen.key(['i', 'I', 'enter'], () => {
             if (this.screen.focused === this.menuList || this.screen.focused === this.logPanel) return;
@@ -114,17 +122,20 @@ export class FuturisticTUI {
         this.inputBox.on('submit', (value) => {
             this.inputBox.clearValue();
             if (value.trim() !== '') {
-                this.logPanel.log(chalk.hex('#FFD700')(`[DIRECTIVE]: ${value}`));
+                this.logPanel.log(chalk.hex('#FFD700')(`\n[DIRECTIVA ENVIADA]: ${value}`));
                 if (this.serverProcess) {
-                    this.serverProcess.stdin.write(value + '\n');
+                    this.serverProcess.send({ type: 'tui_command', data: value });
                 }
             }
             this.screen.render();
+            // Re-focus the input box immediately to allow consecutive commands
+            this.inputBox.focus();
+            this.inputBox.readInput();
         });
 
         // Set initial focus
-        focusIndex = 0; // menu list
-        this.menuList.focus();
+        this.inputBox.focus();
+        this.inputBox.readInput();
 
         this.simulateData();
         this.startServer();

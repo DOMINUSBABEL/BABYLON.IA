@@ -210,6 +210,32 @@ hermes.subscribeOutbound((responseObj) => {
     }
 });
 
+// Escuchar comandos IPC desde la TUI
+process.on('message', async (msg) => {
+    if (msg.type === 'tui_command') {
+        const input = msg.data;
+        console.log(chalk.cyan(`\n[~] Tesis Natural Recibida (TUI Terminal): ${input}`));
+        try {
+            const ingestResult = await gateway.ingestEvent({
+                text: input,
+                channel: 'tui',
+                from: 'internal',
+                to: 'internal',
+                isCommand: input.toLowerCase().startsWith('!geist')
+            });
+
+            if (ingestResult.type === 'error' || ingestResult.type === 'text') {
+                console.log(`\n*BABYLON.IA (TUI)*:\n${ingestResult.text}\n`);
+            }
+            
+            // Sincronizar con WhatsApp
+            agentEvents.emit('broadcast_whatsapp', `*[Directiva desde Terminal TUI]*\n_Tesis:_ ${input}`);
+        } catch (error) {
+            console.error(chalk.red(`[Error Procesando Tarea]: ${error.message}`));
+        }
+    }
+});
+
 io.on('connection', (socket) => {
     // console.log(chalk.gray('  [Dashboard] Cliente Web conectado.'));
 

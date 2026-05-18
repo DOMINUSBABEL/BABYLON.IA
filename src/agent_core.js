@@ -160,8 +160,21 @@ export async function processTask(prompt, updateProgress) {
                 continue;
             }
 
-            if (parsedResponse.Thought && parsedResponse.Thought.Tesis) {
-                updateProgress(`Pensamiento [Tesis]: ${parsedResponse.Thought.Tesis.substring(0, 40)}...`);
+            if (parsedResponse.Thought) {
+                const t = parsedResponse.Thought;
+                if (typeof t === 'string') {
+                    updateProgress(`[RAZONAMIENTO] ${t}`);
+                } else {
+                    updateProgress(`[DIALÉCTICA]:`);
+                    if (t.Tesis) updateProgress(`  > Tesis: ${t.Tesis}`);
+                    if (t.Antitesis) updateProgress(`  > Antítesis: ${t.Antitesis}`);
+                    if (t.Sintesis) updateProgress(`  > Síntesis: ${t.Sintesis}`);
+                }
+                
+                // Emisión de Telemetría de Tokens y Modelo
+                const inTokens = Math.ceil(fullPrompt.length / 4);
+                const outTokens = Math.ceil(rawResponse.length / 4);
+                updateProgress(`[TELEMETRÍA] Modelo: ${activeModel} | In: ~${inTokens} tk | Out: ~${outTokens} tk`);
             }
 
             if (parsedResponse.Action === 'Final_Answer') {
