@@ -12,3 +12,8 @@
 **Vulnerability:** In `src/gateway.js`, `event.media.filename` in media downloads and `<ruta>` in the `!geist enviar` command were used without sanitization via `path.basename()`. This allowed path traversal (e.g., downloading files to arbitrary directories or reading files outside the workspace) by authorized users or potentially via maliciously crafted filenames.
 **Learning:** Even when inputs originate from internal systems or "authorized" users, filenames and file paths provided by users or APIs must always be sanitized to prevent accessing or writing files outside of intended directories.
 **Prevention:** Ensured `event.media.filename` uses `path.basename()` before writing the file. Updated the `!geist enviar` command to securely resolve paths using `path.resolve` and correctly validate directory boundaries using `resolvedPath.startsWith(workspaceDir + path.sep)` to confine reads to the workspace directory without breaking nested file lookups.
+
+## 2025-05-24 - [Command Injection via exec in Jules Bridge]
+**Vulnerability:** In `src/jules_bridge.js`, `child_process.exec` was used to run shell commands by interpolating variables like `prompt` and `sessionId`. This permitted arbitrary command injection.
+**Learning:** `child_process.exec` evaluates strings in a shell environment, meaning any unsanitized user input allows shell injection attacks.
+**Prevention:** Use `child_process.execFile` and pass dynamic inputs inside the arguments array instead of relying on shell string interpolation.
