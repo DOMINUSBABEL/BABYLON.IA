@@ -1,3 +1,8 @@
+## 2026-05-20 - [Command Injection in Jules Bridge via child_process.exec]
+**Vulnerability:** `src/jules_bridge.js` used `child_process.exec` with string interpolation for arguments like `prompt` and `sessionId` in methods `createJulesSession` and `pullJulesSession`. This allowed command injection if an attacker supplied a malicious string.
+**Learning:** Never use `child_process.exec` with string interpolation for executing shell commands with user inputs. Even with sanitized inputs, `exec` executes through a shell and is fundamentally insecure against command injection.
+**Prevention:** Use `child_process.execFile` and pass command arguments as an array. This avoids shell evaluation and safely escapes arguments.
+
 ## 2025-05-24 - [Command Injection via WebSocket Config Update]
 **Vulnerability:** Unauthenticated WebSocket endpoint `update_config` allowed setting `process.env.GEMINI_MODEL` arbitrarily. This was passed directly to a `spawn({ shell: true })` call in `src/agent_core.js`, leading to a severe command injection vulnerability.
 **Learning:** WebSocket inputs must be treated with the same strict sanitization as HTTP endpoints, especially when mapped to environment variables or shell execution paths.
