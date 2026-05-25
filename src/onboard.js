@@ -36,27 +36,30 @@ async function showOnboardBanner() {
 
     if (!isMobile) {
         const city = [
-            "                                       /\\                                          ",
-            "                                      |::|                                          ",
-            "                                     < ++ >                                         ",
-            "                                      |::|                                          ",
-            "         _/\\_                         /++++\\                         _/\\_           ",
-            "        |    |                       /++++++\\                       |    |          ",
-            "       /      \\                     |========|                     /      \\         ",
-            "      |        |                   /++++++++++\\                   |        |        ",
-            "     /__________\\                 /++++++++++++\\                 /__________\\       ",
-            "     |==========|                |==============|                |==========|       ",
-            "    /++++++++++++\\              /++++++++++++++++\\              /++++++++++++\\      ",
-            "   /++++++++++++++\\            |==================|            /++++++++++++++\\     ",
-            "   |==============|           /++++++++++++++++++++\\           |==============|     ",
-            "  /++++++++++++++++\\         /++++++++++++++++++++++\\         /++++++++++++++++\\    ",
-            "  |================|        |========================|        |================|    ",
-            " /++++++++++++++++++\\      /++++++++++++++++++++++++++\\      /++++++++++++++++++\\   ",
-            " |==================|     /++++++++++++++++++++++++++++\\     |==================|   ",
-            "/++++++++++++++++++++\\   |==============================|   /++++++++++++++++++++\\  ",
-            "|======+======+======|  /++++++++++++++++++++++++++++++++\\  |======+======+======|  ",
-            "|  ||  |  ||  |  ||  | |==================================| |  ||  |  ||  |  ||  |  ",
-            "|__||__|__||__|__||__|/++++++++++++++++++++++++++++++++++++\\|__||__|__||__|__||__|  "
+            "                                     :::                                           ",
+            "                                    /\\^/\\                                          ",
+            "                                   |::|::|                                         ",
+            "                                  < ++|++ >                                        ",
+            "                                  /:::|:::\\                                        ",
+            "                                 /====|====\\                                       ",
+            "                                /+++++|+++++\\                                      ",
+            "                               /======|======\\                                     ",
+            "                              /+++++++|+++++++\\                                    ",
+            "                             /========|========\\                                   ",
+            "         ___                /+++++++++|+++++++++\\                ___               ",
+            "        |   |              /==========|==========\\              |   |              ",
+            "       /     \\            /+++++++++++|+++++++++++\\            /     \\             ",
+            "      |       |          |============|============|          |       |            ",
+            "     /_________\\        /+++++++++++++|+++++++++++++\\        /_________\\           ",
+            "     |=========|       |==============|==============|       |=========|           ",
+            "    /+++++++++++\\     /+++++++++++++++|+++++++++++++++\\     /+++++++++++\\          ",
+            "   /+++++++++++++\\   |================|================|   /+++++++++++++\\         ",
+            "   |=============|  /+++++++++++++++++|+++++++++++++++++\\  |=============|         ",
+            "  /+++++++++++++++\\|==================|==================|/+++++++++++++++\\        ",
+            " /+++++++++++++++++|++++++++++++++++++|++++++++++++++++++|+++++++++++++++++\\       ",
+            "|======+======+====|==================|==================|====+======+======|      ",
+            "|  ||  |  ||  |  |||  ||  |  ||  |  |||  ||  |  ||  |  |||  ||  |  ||  |  |||      ",
+            "|__||__|__||__|__|||__||__|__||__|__|||__||__|__||__|__|||__||__|__||__|__|||      "
         ];
         for (let line of city) {
             console.log(babylonGradient(line));
@@ -115,6 +118,7 @@ export async function runOnboard() {
   const modelChoices = [
       new Separator('--- Google Gemini ---'),
       { name: 'gemini-3.1-pro-preview (Súper-Inteligencia, máximo razonamiento) [Recomendado]', value: 'gemini-3.1-pro-preview' },
+      { name: 'gemini-3.1-flash (Equilibrio perfecto velocidad/inteligencia)', value: 'gemini-3.1-flash' },
       { name: 'gemini-3.0-pro (Avanzado, reasoning superior)', value: 'gemini-3.0-pro' },
       { name: 'gemini-2.5-pro (Avanzado, razonamiento complejo)', value: 'gemini-2.5-pro' },
       { name: 'gemini-2.5-flash (Rápido, respuestas instantáneas)', value: 'gemini-2.5-flash' },
@@ -132,9 +136,11 @@ export async function runOnboard() {
       { name: 'gpt-4o (Versatilidad)', value: 'gpt-4o' },
       { name: 'gpt-4o-mini (Cost-Effective)', value: 'gpt-4o-mini' },
       
-      new Separator('--- xAI / DeepSeek / Groq ---'),
+      new Separator('--- xAI / DeepSeek / Groq / China AI ---'),
       { name: 'grok-2-latest (xAI Grok 2)', value: 'grok-2-latest' },
       { name: 'deepseek-r1 (Groq/API)', value: 'deepseek-r1' },
+      { name: 'moonshot-v1-auto (Kimi - Moonshot AI)', value: 'moonshot-v1-auto' },
+      { name: 'abab6.5s-chat (MiniMax - High Efficiency)', value: 'abab6.5s-chat' },
       { name: 'llama-3.3-70b-versatile (Groq Llama)', value: 'llama-3.3-70b-versatile' },
       { name: 'mixtral-8x7b-32768 (Groq Mixtral)', value: 'mixtral-8x7b-32768' }
   ];
@@ -143,16 +149,18 @@ export async function runOnboard() {
       modelChoices.push(new Separator('--- Local / Edge (Termux / Android) ---'));
       modelChoices.push({ name: 'ollama:qwen2.5:0.5b (Local Open Source - Ultra Cuantizado)', value: 'ollama:qwen2.5:0.5b' });
       modelChoices.push({ name: 'ollama:llama3.2:1b (Local Meta Llama 3.2)', value: 'ollama:llama3.2:1b' });
+      modelChoices.push({ name: 'aiedge:gemma-3-4b-it (Nativo llama.cpp E4B)', value: 'aiedge:gemma-3-4b-it' });
       modelChoices.push({ name: 'aiedge:gemma-2-2b-it (Nativo llama.cpp E2B)', value: 'aiedge:gemma-2-2b-it' });
   } else {
       modelChoices.push(new Separator('--- Local (Ollama, LM Studio, vLLM) ---'));
+      modelChoices.push({ name: 'ollama:gemma3:27b (Google Gemma 3 27B Local)', value: 'ollama:gemma3:27b' });
+      modelChoices.push({ name: 'ollama:gemma3:4b (Google Gemma 3 4B Local)', value: 'ollama:gemma3:4b' });
       modelChoices.push({ name: 'ollama:gemma2 (Google Gemma 2 Local)', value: 'ollama:gemma2' });
       modelChoices.push({ name: 'ollama:deepseek-r1:8b (DeepSeek Local Reasoning)', value: 'ollama:deepseek-r1:8b' });
       modelChoices.push({ name: 'ollama:llama3.3:70b (Servidor GPU/Mac Studio)', value: 'ollama:llama3.3:70b' });
       modelChoices.push({ name: 'ollama:mistral (Generalista Local)', value: 'ollama:mistral' });
       modelChoices.push({ name: 'ollama:phi4 (Coding Local Pequeño)', value: 'ollama:phi4' });
       modelChoices.push({ name: 'ollama:qwen2.5-coder:14b (Coding Local)', value: 'ollama:qwen2.5-coder:14b' });
-      modelChoices.push({ name: 'aiedge:gemma-2-9b-it (Nativo llama.cpp E4B)', value: 'aiedge:gemma-2-9b-it' });
   }
 
   const model = await select({
@@ -246,6 +254,10 @@ PUBLIC_URL=${publicUrl}
 
   fs.writeFileSync(envPath, envContent, 'utf-8');
   console.log(chalk.green(`\n[✓] Configuración base guardada exitosamente en ${envPath}`));
+
+  // Recargar variables de entorno para los scripts de emparejamiento
+  const dotenv = await import('dotenv');
+  dotenv.default.config({ path: envPath, override: true });
 
   // 9. QR Linking Process for active platforms
   if (platforms.includes('whatsapp')) {

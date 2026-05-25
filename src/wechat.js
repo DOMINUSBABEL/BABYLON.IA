@@ -14,7 +14,6 @@ export function initWeChatBot() {
 
     bot.on('scan', (qrcode, status) => {
         if (status === 2) { // 2 = waiting for scan
-            console.clear();
             console.log(chalk.yellow('\n[!] Escanea el siguiente código QR con WeChat:'));
             qrTerm.generate(qrcode, { small: true });
             console.log(chalk.gray('\nEsperando autenticación de WeChat...'));

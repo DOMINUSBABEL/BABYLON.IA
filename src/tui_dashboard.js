@@ -38,11 +38,13 @@ export class FuturisticTUI {
         // 0. ASCII Brand Header
         this.headerBox = this.grid.set(0, 0, 3, 12, blessed.box, {
             content: chalk.hex('#ffd700').bold(`
-   ___   _   __ __   _    ____ _  __   ____   ___ 
-  / _ ) / | / // /  / |  / __// |/ /  /  _ \\ / _ |
- / _  |/ /| // /__ / /| |\\ \\ /    /  _\\ \\  / __ |
-/____//_/ |_//____//_/ |_/___//_/|_/  /___/ /_/ |_|
-            ::: ARCHITECTURE GEIST :::
+                              /\\^/\\
+                             |::|::|
+                            < ++|++ >
+                           /=========\\
+                          /+++++++++++\\
+                         /=============\\
+                      [ DATA NEXUS GEIST ]
             `),
             align: 'center',
             valign: 'middle',
@@ -94,14 +96,22 @@ export class FuturisticTUI {
         });
         focusable.push(this.logPanel);
 
-        // 5. Interactive Terminal Input (Textbox) (Overlaid at bottom if needed, or mapped to keys)
-        // We will capture global typing for direct commands if not focused on list/log
+        // 5. Interactive Terminal Input (Textbox)
         this.inputBox = blessed.textbox({
             parent: this.screen,
-            bottom: 0, left: 0, width: '100%', height: 1,
-            keys: true, inputOnFocus: true,
-            style: { fg: 'white', bg: 'blue' }
+            bottom: 0,
+            left: 0,
+            width: '100%',
+            height: 3,
+            label: ' DIRECTIVA DEL USUARIO (Presiona Tab para enfocarte aquí) ',
+            keys: true,
+            inputOnFocus: true,
+            border: { type: "line", fg: "yellow" },
+            style: { fg: 'white', bg: 'black', focus: { border: { fg: 'cyan' }, bg: '#050a0f' } }
         });
+
+        // Ensure log panel doesn't overlap the input box
+        this.logPanel.height = '100%-3'; // We adjust height to make room for the 3-line input box
 
         this.screen.key(['i', 'I', 'enter'], () => {
             if (this.screen.focused === this.menuList || this.screen.focused === this.logPanel) return;
@@ -112,17 +122,20 @@ export class FuturisticTUI {
         this.inputBox.on('submit', (value) => {
             this.inputBox.clearValue();
             if (value.trim() !== '') {
-                this.logPanel.log(chalk.hex('#FFD700')(`[DIRECTIVE]: ${value}`));
+                this.logPanel.log(chalk.hex('#FFD700')(`\n[DIRECTIVA ENVIADA]: ${value}`));
                 if (this.serverProcess) {
-                    this.serverProcess.stdin.write(value + '\n');
+                    this.serverProcess.send({ type: 'tui_command', data: value });
                 }
             }
             this.screen.render();
+            // Re-focus the input box immediately to allow consecutive commands
+            this.inputBox.focus();
+            this.inputBox.readInput();
         });
 
         // Set initial focus
-        focusIndex = 0; // menu list
-        this.menuList.focus();
+        this.inputBox.focus();
+        this.inputBox.readInput();
 
         this.simulateData();
         this.startServer();
@@ -143,10 +156,10 @@ export class FuturisticTUI {
             });
             this.dynamicPanel.setData({ titles: ['T1', 'T2', 'T3'], data: [5, 10, 8] });
         } else if (layout === 'processing') {
-            // Procedural UI: Swap Map for Donut/Progress
+            // Procedural UI: Swap Map for Donut/Progress (Cognitive Load Visualizer)
             this.screen.remove(this.dynamicPanel);
             this.dynamicPanel = this.grid.set(7, 0, 5, 4, contrib.donut, {
-                label: ' NEURAL LOAD ',
+                label: ' NEURAL LOAD [ PROCESSING ] ',
                 radius: 8, arcWidth: 3, remainColor: 'black', yPadding: 2
             });
             this.dynamicPanel.setData([
@@ -154,6 +167,15 @@ export class FuturisticTUI {
                 {percent: 90, label: 'RAM', color: 'yellow'}
             ]);
             this.headerBox.style.fg = 'yellow'; // Pulse effect
+            this.headerBox.setContent(chalk.hex('#ffd700').bold(`
+                              /\\^/\\
+                             |::|::|
+                            < ++|++ >
+                           /=========\\
+                          /+++++++++++\\
+                         /=============\\
+                      [ DECODING DIRECTIVE ]
+            `));
         } else {
             // Default: Map
             this.screen.remove(this.dynamicPanel);
@@ -163,7 +185,47 @@ export class FuturisticTUI {
             });
             this.dynamicPanel.addMarker({"lon" : "-79.0000", "lat" : "43.5000", color: "red", char: "X" }); 
             this.headerBox.style.fg = 'cyan';
+            this.headerBox.setContent(chalk.hex('#ffd700').bold(`
+                              /\\^/\\
+                             |::|::|
+                            < ++|++ >
+                           /=========\\
+                          /+++++++++++\\
+                         /=============\\
+                      [ DATA NEXUS GEIST ]
+            `));
         }
+        this.screen.render();
+    }
+
+    showQRBox(qrStr) {
+        if (this.qrBox) {
+            this.screen.remove(this.qrBox);
+        }
+        this.qrBox = blessed.box({
+            parent: this.screen,
+            top: 'center',
+            left: 'center',
+            width: '80%',
+            height: '80%',
+            content: chalk.yellow('Escanea este QR para enlazar WhatsApp:\n\n') + qrStr + chalk.gray('\n\n(Presiona X para cerrar este diálogo)'),
+            border: { type: 'line', fg: 'yellow' },
+            style: { bg: 'black', fg: 'white' },
+            align: 'center',
+            valign: 'middle',
+            scrollable: true,
+            alwaysScroll: true
+        });
+        
+        // Agregar atajo 'x' a la pantalla globalmente temporal
+        this.screen.onceKey(['x', 'X'], (ch, key) => {
+            if (this.qrBox) {
+                this.screen.remove(this.qrBox);
+                this.qrBox = null;
+                this.screen.render();
+            }
+        });
+        
         this.screen.render();
     }
 
@@ -181,6 +243,8 @@ export class FuturisticTUI {
         this.serverProcess.on('message', (msg) => {
             if (msg.type === 'tui_layout') {
                 this.switchToLayout(msg.layout);
+            } else if (msg.type === 'qr_terminal') {
+                this.showQRBox(msg.data);
             }
         });
 
@@ -209,21 +273,39 @@ export class FuturisticTUI {
         const series1 = { title: 'Trantor Variance', x: ['t-5', 't-4', 't-3', 't-2', 't-1', 't0'], y: [5, 10, 15, 8, 12, 20] };
         const series2 = { title: 'Terminus Stability', x: ['t-5', 't-4', 't-3', 't-2', 't-1', 't0'], y: [90, 85, 88, 92, 95, 96], style: { line: 'yellow' } };
         
+        // Procedural Animation loop
+        let tick = 0;
         setInterval(() => {
+            tick++;
             series1.y.shift(); series1.y.push(Math.floor(Math.random() * 30));
             this.psychohistoryChart.setData([series1, series2]);
             
             if (this.currentLayout === 'processing' && this.dynamicPanel.setData) {
+                 // Simulate high neural load and glitching during processing
                  this.dynamicPanel.setData([
-                    {percent: Math.floor(Math.random() * 20) + 70, label: 'CPU', color: 'red'},
-                    {percent: Math.floor(Math.random() * 10) + 40, label: 'RAM', color: 'yellow'}
+                    {percent: Math.floor(Math.random() * 20) + 80, label: 'CPU', color: 'red'},
+                    {percent: Math.floor(Math.random() * 10) + 85, label: 'RAM', color: 'yellow'}
                  ]);
+                 
+                 // Glitch effect on the header
+                 if (tick % 3 === 0) {
+                    this.headerBox.style.fg = Math.random() > 0.5 ? 'red' : 'magenta';
+                 } else {
+                    this.headerBox.style.fg = 'yellow';
+                 }
             } else if (this.currentLayout === 'dataviz' && this.dynamicPanel.setData) {
                  this.dynamicPanel.setData({ titles: ['T1', 'T2', 'T3'], data: [Math.floor(Math.random()*10), Math.floor(Math.random()*10), Math.floor(Math.random()*10)] });
+            } else {
+                 // Default radar sweeping simulation on map by toggling marker colors
+                 if (tick % 2 === 0 && this.dynamicPanel.clearMarkers) {
+                     this.dynamicPanel.clearMarkers();
+                     this.dynamicPanel.addMarker({"lon" : "-79.0000", "lat" : "43.5000", color: tick % 4 === 0 ? "cyan" : "red", char: "X" }); 
+                     this.dynamicPanel.addMarker({"lon" : (Math.random() * 360 - 180).toString(), "lat" : (Math.random() * 180 - 90).toString(), color: "yellow", char: "O" });
+                 }
             }
 
             this.screen.render();
-        }, 1500);
+        }, 1000);
     }
 
     render() {

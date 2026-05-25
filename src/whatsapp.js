@@ -63,10 +63,15 @@ export function initWhatsAppClient(agentEvents = null) {
         });
 
         client.on('qr', (qr) => {
-            console.log(chalk.cyanBright('\n[!] Escanea el código QR con tu WhatsApp (Dispositivos Vinculados) para enlazar la conciencia:'));
-            qrcode.generate(qr, { small: true });
+            if (process.env.BABYLON_MODE !== 'gateway') {
+                console.log(chalk.cyanBright('\n[!] Escanea el código QR con tu WhatsApp (Dispositivos Vinculados) para enlazar la conciencia:'));
+                qrcode.generate(qr, { small: true });
+            } else {
+                console.log(chalk.cyanBright('\n[!] Se ha generado un nuevo código QR. Abre el Dashboard Web para escanearlo, o revisa la vista principal.'));
+            }
             
             if (agentEvents) {
+                // Emitir el QR en base64 para el Web Dashboard
                 import('qrcode').then(qrcodeModule => {
                      qrcodeModule.toDataURL(qr, (err, url) => {
                          if (!err) {
@@ -75,6 +80,11 @@ export function initWhatsAppClient(agentEvents = null) {
                      });
                 }).catch(err => {
                     console.error('Error importando qrcode:', err.message);
+                });
+
+                // Emitir el QR en raw (string de terminal) para la TUI
+                qrcode.generate(qr, { small: true }, (qrStr) => {
+                    agentEvents.emit('qr_terminal', qrStr);
                 });
             }
         });
@@ -257,7 +267,6 @@ export function pairWhatsAppClient() {
         });
 
         client.on('qr', (qr) => {
-            console.clear();
             console.log(chalk.yellow('\n[!] Escanea el siguiente código QR con tu aplicación de WhatsApp (Dispositivos Vinculados):'));
             qrcode.generate(qr, { small: true });
             console.log(chalk.gray('\nEsperando autenticación...'));

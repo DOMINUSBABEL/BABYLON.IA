@@ -50,34 +50,37 @@ async function showBanner() {
 
     if (!isMobile) {
         const city = [
-            "                                       /\\                                          ",
-            "                                      |::|                                          ",
-            "                                     < ++ >                                         ",
-            "                                      |::|                                          ",
-            "         _/\\_                         /++++\\                         _/\\_           ",
-            "        |    |                       /++++++\\                       |    |          ",
-            "       /      \\                     |========|                     /      \\         ",
-            "      |        |                   /++++++++++\\                   |        |        ",
-            "     /__________\\                 /++++++++++++\\                 /__________\\       ",
-            "     |==========|                |==============|                |==========|       ",
-            "    /++++++++++++\\              /++++++++++++++++\\              /++++++++++++\\      ",
-            "   /++++++++++++++\\            |==================|            /++++++++++++++\\     ",
-            "   |==============|           /++++++++++++++++++++\\           |==============|     ",
-            "  /++++++++++++++++\\         /++++++++++++++++++++++\\         /++++++++++++++++\\    ",
-            "  |================|        |========================|        |================|    ",
-            " /++++++++++++++++++\\      /++++++++++++++++++++++++++\\      /++++++++++++++++++\\   ",
-            " |==================|     /++++++++++++++++++++++++++++\\     |==================|   ",
-            "/++++++++++++++++++++\\   |==============================|   /++++++++++++++++++++\\  ",
-            "|======+======+======|  /++++++++++++++++++++++++++++++++\\  |======+======+======|  ",
-            "|  ||  |  ||  |  ||  | |==================================| |  ||  |  ||  |  ||  |  ",
-            "|__||__|__||__|__||__|/++++++++++++++++++++++++++++++++++++\\|__||__|__||__|__||__|  ",
-            "|                    |======================================|                    |  ",
-            "|  [ DATA-NEXUS ]    |    |  ||  |   GEIST  |  ||  |        |  [ OMNI-CHANNEL ]  |  ",
-            "|____________________|____|__||__|__________|__||__|________|____________________|  "
+            "                                     :::                                           ",
+            "                                    /\\^/\\                                          ",
+            "                                   |::|::|                                         ",
+            "                                  < ++|++ >                                        ",
+            "                                  /:::|:::\\                                        ",
+            "                                 /====|====\\                                       ",
+            "                                /+++++|+++++\\                                      ",
+            "                               /======|======\\                                     ",
+            "                              /+++++++|+++++++\\                                    ",
+            "                             /========|========\\                                   ",
+            "         ___                /+++++++++|+++++++++\\                ___               ",
+            "        |   |              /==========|==========\\              |   |              ",
+            "       /     \\            /+++++++++++|+++++++++++\\            /     \\             ",
+            "      |       |          |============|============|          |       |            ",
+            "     /_________\\        /+++++++++++++|+++++++++++++\\        /_________\\           ",
+            "     |=========|       |==============|==============|       |=========|           ",
+            "    /+++++++++++\\     /+++++++++++++++|+++++++++++++++\\     /+++++++++++\\          ",
+            "   /+++++++++++++\\   |================|================|   /+++++++++++++\\         ",
+            "   |=============|  /+++++++++++++++++|+++++++++++++++++\\  |=============|         ",
+            "  /+++++++++++++++\\|==================|==================|/+++++++++++++++\\        ",
+            " /+++++++++++++++++|++++++++++++++++++|++++++++++++++++++|+++++++++++++++++\\       ",
+            "|======+======+====|==================|==================|====+======+======|      ",
+            "|  ||  |  ||  |  |||  ||  |  ||  |  |||  ||  |  ||  |  |||  ||  |  ||  |  |||      ",
+            "|__||__|__||__|__|||__||__|__||__|__|||__||__|__||__|__|||__||__|__||__|__|||      ",
+            "|                  |=====================================|                  |      ",
+            "|  [ DATA-NEXUS ]  |   |  ||  |   GEIST AI  |  ||  |     | [ OMNI-CHANNEL ] |      ",
+            "|__________________|___|__||__|_____________|__||__|_____|__________________|      "
         ];
         for (let line of city) {
             console.log(babylonGradient(line));
-            await sleep(35); // Delay para la animaciÃ³n
+            await sleep(30); // Delay para la animación
         }
     } else {
         // Torre minimalista para terminales verticales (mÃ³viles)
@@ -199,6 +202,90 @@ program
   .description('Inicia la interfaz de terminal futurista (Prime Radiant / Foundation UI).')
   .action(() => {
     startTUI();
+  });
+
+program
+  .command('models')
+  .description('Despliega el menú para seleccionar el modelo cognitivo en tiempo real.')
+  .action(async () => {
+    console.clear();
+    CFonts.say('MODELS', { font: 'block', align: 'center', colors: ['#ffd700', '#00aaff'] });
+    console.log(chalk.cyan('Selecciona el nuevo núcleo cognitivo para BABYLON.IA:\n'));
+    
+    // Lazy import Inquirer to keep CLI fast
+    const { select, Separator } = await import('@inquirer/prompts');
+    
+    const environment = process.env.ENVIRONMENT || 'desktop';
+
+    const modelChoices = [
+        new Separator('--- Google Gemini ---'),
+        { name: 'gemini-3.1-pro-preview (Súper-Inteligencia, máximo razonamiento) [Recomendado]', value: 'gemini-3.1-pro-preview' },
+        { name: 'gemini-3.1-flash (Equilibrio perfecto velocidad/inteligencia)', value: 'gemini-3.1-flash' },
+        { name: 'gemini-3.0-pro (Avanzado, reasoning superior)', value: 'gemini-3.0-pro' },
+        { name: 'gemini-2.5-pro (Avanzado, razonamiento complejo)', value: 'gemini-2.5-pro' },
+        { name: 'gemini-2.5-flash (Rápido, respuestas instantáneas)', value: 'gemini-2.5-flash' },
+        { name: 'gemini-2.0-flash-lite-preview-02-05 (Ultra Ligero)', value: 'gemini-2.0-flash-lite-preview-02-05' },
+        
+        new Separator('--- Anthropic (Claude) ---'),
+        { name: 'claude-3-7-sonnet-20250219 (Máximo Coding & Reasoning)', value: 'claude-3-7-sonnet-20250219' },
+        { name: 'claude-3-5-haiku-20241022 (Velocidad extrema)', value: 'claude-3-5-haiku-20241022' },
+        { name: 'claude-3-opus-20240229 (Análisis Profundo)', value: 'claude-3-opus-20240229' },
+        
+        new Separator('--- OpenAI ---'),
+        { name: 'o3-mini (Reasoning Ligero y Rápido)', value: 'o3-mini' },
+        { name: 'o1-preview (Máximo Razonamiento)', value: 'o1-preview' },
+        { name: 'gpt-4.5-preview (Capacidad General Avanzada)', value: 'gpt-4.5-preview' },
+        { name: 'gpt-4o (Versatilidad)', value: 'gpt-4o' },
+        { name: 'gpt-4o-mini (Cost-Effective)', value: 'gpt-4o-mini' },
+        
+        new Separator('--- xAI / DeepSeek / Groq / China AI ---'),
+        { name: 'grok-2-latest (xAI Grok 2)', value: 'grok-2-latest' },
+        { name: 'deepseek-r1 (Groq/API)', value: 'deepseek-r1' },
+        { name: 'moonshot-v1-auto (Kimi - Moonshot AI)', value: 'moonshot-v1-auto' },
+        { name: 'abab6.5s-chat (MiniMax - High Efficiency)', value: 'abab6.5s-chat' },
+        { name: 'llama-3.3-70b-versatile (Groq Llama)', value: 'llama-3.3-70b-versatile' },
+        { name: 'mixtral-8x7b-32768 (Groq Mixtral)', value: 'mixtral-8x7b-32768' }
+    ];
+
+    if (environment === 'mobile_terminal') {
+        modelChoices.push(new Separator('--- Local / Edge (Termux / Android) ---'));
+        modelChoices.push({ name: 'ollama:qwen2.5:0.5b (Local Open Source - Ultra Cuantizado)', value: 'ollama:qwen2.5:0.5b' });
+        modelChoices.push({ name: 'ollama:llama3.2:1b (Local Meta Llama 3.2)', value: 'ollama:llama3.2:1b' });
+        modelChoices.push({ name: 'aiedge:gemma-3-4b-it (Nativo llama.cpp E4B)', value: 'aiedge:gemma-3-4b-it' });
+        modelChoices.push({ name: 'aiedge:gemma-2-2b-it (Nativo llama.cpp E2B)', value: 'aiedge:gemma-2-2b-it' });
+    } else {
+        modelChoices.push(new Separator('--- Local (Ollama, LM Studio, vLLM) ---'));
+        modelChoices.push({ name: 'ollama:gemma3:27b (Google Gemma 3 27B Local)', value: 'ollama:gemma3:27b' });
+        modelChoices.push({ name: 'ollama:gemma3:4b (Google Gemma 3 4B Local)', value: 'ollama:gemma3:4b' });
+        modelChoices.push({ name: 'ollama:gemma2 (Google Gemma 2 Local)', value: 'ollama:gemma2' });
+        modelChoices.push({ name: 'ollama:deepseek-r1:8b (DeepSeek Local Reasoning)', value: 'ollama:deepseek-r1:8b' });
+        modelChoices.push({ name: 'ollama:llama3.3:70b (Servidor GPU/Mac Studio)', value: 'ollama:llama3.3:70b' });
+        modelChoices.push({ name: 'ollama:mistral (Generalista Local)', value: 'ollama:mistral' });
+        modelChoices.push({ name: 'ollama:phi4 (Coding Local Pequeño)', value: 'ollama:phi4' });
+        modelChoices.push({ name: 'ollama:qwen2.5-coder:14b (Coding Local)', value: 'ollama:qwen2.5-coder:14b' });
+    }
+
+    const model = await select({
+        message: 'Selecciona el modelo cognitivo a utilizar:',
+        choices: modelChoices,
+        default: process.env.GEMINI_MODEL
+    });
+
+    const envPath = path.join(rootDir, '.env');
+    if (fs.existsSync(envPath)) {
+        let envContent = fs.readFileSync(envPath, 'utf-8');
+        // Reemplazar o añadir
+        if (envContent.includes('GEMINI_MODEL=')) {
+            envContent = envContent.replace(/GEMINI_MODEL=.*/, `GEMINI_MODEL=${model}`);
+        } else {
+            envContent += `\nGEMINI_MODEL=${model}\n`;
+        }
+        fs.writeFileSync(envPath, envContent, 'utf-8');
+        console.log(chalk.green(`\n[✓] Núcleo actualizado a ${chalk.bold(model)}.`));
+        console.log(chalk.gray(`Si el gateway está en ejecución, reinícialo (Ctrl+C y babylonia gateway) para aplicar el cambio.`));
+    } else {
+        console.log(chalk.red(`\n[X] No se encontró el archivo .env. Ejecuta 'babylonia onboard' primero.`));
+    }
   });
 
 program.parse(process.argv);

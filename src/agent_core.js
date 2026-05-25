@@ -133,35 +133,72 @@ export async function processTask(prompt, updateProgress) {
                     }
 
                     await new Promise((resolve, reject) => {
+                        const timeoutId = setTimeout(() => {
+                            try { geminiProcess.kill(); } catch(e){}
+                            reject(new Error("Timeout de 60s excedido esperando respuesta del motor cognitivo."));
+                        }, 60000);
+
                         geminiProcess.on('close', (code) => {
-                            if (code !== 0) reject(new Error(`Gemini CLI falló con código ${code}: ${stderrData}`));
+                            clearTimeout(timeoutId);
+                            if (code !== 0) reject(new Error(`Motor falló con código ${code}: ${stderrData}`));
                             else resolve();
                         });
-                        geminiProcess.on('error', (err) => reject(err));
+                        geminiProcess.on('error', (err) => {
+                            clearTimeout(timeoutId);
+                            reject(err);
+                        });
                     });
 
                     const jsonStartIndex = stdoutData.indexOf('{');
-                    if (jsonStartIndex === -1) throw new Error("No se pudo analizar respuesta de Gemini CLI: " + stdoutData);
-                    
-                    const data = JSON.parse(stdoutData.substring(jsonStartIndex));
-                    if (data.response) rawResponse = data.response;
-                    else throw new Error("Formato desconocido del CLI.");
+                    if (jsonStartIndex === -1) {
+                        // Fallback: si no hay JSON obvio, intenta devolver el output en crudo para forzar una lectura del LLM
+                        rawResponse = stdoutData.trim();
+                    } else {
+                        try {
+                            const data = JSON.parse(stdoutData.substring(jsonStartIndex));
+                            if (data.response) rawResponse = data.response;
+                            else rawResponse = stdoutData;
+                        } catch (e) {
+                            rawResponse = stdoutData.substring(jsonStartIndex);
+                        }
+                    }
                 }
             }
 
             // Parsear Respuesta ReAct (esperada en JSON)
             let parsedResponse;
             try {
-                let cleanJson = rawResponse.replace(/```json/gi, '').replace(/```/g, '').trim();
-                parsedResponse = JSON.parse(cleanJson);
+                const firstBrace = rawResponse.indexOf('{');
+                const lastBrace = rawResponse.lastIndexOf('}');
+                if (firstBrace !== -1 && lastBrace !== -1 && lastBrace >= firstBrace) {
+                    const cleanJson = rawResponse.substring(firstBrace, lastBrace + 1);
+                    parsedResponse = JSON.parse(cleanJson);
+                } else {
+                    throw new Error("No se detectó estructura JSON.");
+                }
             } catch(e) {
-                conversationHistory.push({ role: 'Observación', content: 'Error: El modelo no devolvió un JSON válido. Reintenta estrictamente en JSON.' });
-                updateProgress(`Dialéctica [Iter ${iter}]: Fallo de parseo, reintentando...`);
+                updateProgress(`[WARNING] Dialéctica [Iter ${iter}]: Fallo de parseo JSON. Forzando reintento...`);
+                // Mostrar solo un fragmento de la raw response si falla
+                let safeRaw = rawResponse.replace(/\n/g, ' ').substring(0, 100);
+                conversationHistory.push({ role: 'Observación', content: `Error: El modelo no devolvió un JSON válido. Respuesta recibida: "${safeRaw}...". Reintenta estrictamente devolviendo SÓLO el objeto JSON solicitado, sin texto extra ni markdown.` });
                 continue;
             }
 
-            if (parsedResponse.Thought && parsedResponse.Thought.Tesis) {
-                updateProgress(`Pensamiento [Tesis]: ${parsedResponse.Thought.Tesis.substring(0, 40)}...`);
+            if (parsedResponse.Thought) {
+                const t = parsedResponse.Thought;
+                if (typeof t === 'string') {
+                    updateProgress(`[RAZONAMIENTO] ${t}`);
+                } else {
+                    updateProgress(`[DIALÉCTICA]:`);
+                    if (t.Tesis) updateProgress(`  > Tesis: ${t.Tesis}`);
+                    if (t.Antitesis) updateProgress(`  > Antítesis: ${t.Antitesis}`);
+                    if (t.Sintesis) updateProgress(`  > Síntesis: ${t.Sintesis}`);
+                }
+                
+                // Emisión de Telemetría de Tokens y Modelo
+                const inTokens = Math.ceil(fullPrompt.length / 4);
+                const outTokens = Math.ceil(rawResponse.length / 4);
+                updateProgress(`[TELEMETRÍA] Modelo: ${activeModel} | In: ~${inTokens} tk | Out: ~${outTokens} tk`);
             }
 
             if (parsedResponse.Action === 'Final_Answer') {

@@ -151,6 +151,10 @@ agentEvents.on('qr_code', (qrCodeBase64) => {
     io.emit('whatsapp_qr', qrCodeBase64);
 });
 
+agentEvents.on('qr_terminal', (qrStr) => {
+    if (process.send) process.send({ type: 'qr_terminal', data: qrStr });
+});
+
 agentEvents.on('whatsapp_ready', () => {
     isWhatsappReady = true;
     lastQrCode = null; // Ya no necesitamos el QR
@@ -202,6 +206,32 @@ hermes.subscribeOutbound((responseObj) => {
             console.log(`\n*BABYLON.IA (TUI)*:\n${responseObj.text}\n`);
             if (process.send) process.send({ type: 'tui_layout', layout: 'default' });
             if (rlInterface && !rlInterface.closed) { try { if (rlInterface.prompt) rlInterface.prompt(); } catch(e) { rlInterface = null; } }
+        }
+    }
+});
+
+// Escuchar comandos IPC desde la TUI
+process.on('message', async (msg) => {
+    if (msg.type === 'tui_command') {
+        const input = msg.data;
+        console.log(chalk.cyan(`\n[~] Tesis Natural Recibida (TUI Terminal): ${input}`));
+        try {
+            const ingestResult = await gateway.ingestEvent({
+                text: input,
+                channel: 'tui',
+                from: 'internal',
+                to: 'internal',
+                isCommand: input.toLowerCase().startsWith('!geist')
+            });
+
+            if (ingestResult.type === 'error' || ingestResult.type === 'text') {
+                console.log(`\n*BABYLON.IA (TUI)*:\n${ingestResult.text}\n`);
+            }
+            
+            // Sincronizar con WhatsApp
+            agentEvents.emit('broadcast_whatsapp', `*[Directiva desde Terminal TUI]*\n_Tesis:_ ${input}`);
+        } catch (error) {
+            console.error(chalk.red(`[Error Procesando Tarea]: ${error.message}`));
         }
     }
 });
@@ -275,7 +305,9 @@ io.on('connection', (socket) => {
                 try {
                     let steps = [];
 
+                    const eventId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(7);
                     const gatewayEvent = {
+                        eventId: eventId,
                         text: autoPrompt,
                         hasMedia: false,
                         media: null,
@@ -286,14 +318,10 @@ io.on('connection', (socket) => {
                         isCommand: false
                     };
 
-                    const responseObj = await gateway.handleEvent(gatewayEvent, (text) => {
-                        steps.push(`• ${text}`);
-                        io.emit('agent_progress', text);
-                    });
+                    await gateway.ingestEvent(gatewayEvent);
                     
-                    console.log(chalk.green(`[♥] Ciclo de automejora completado.`));
-                    io.emit('system_log', `Heartbeat completado. Revisa tu Wiki Memory para nuevas síntesis.`);
-                    io.emit('agent_status', 'En espera de directivas');
+                    // The actual progress and completion will be handled globally by hermes.subscribeOutbound
+                    // We no longer block here waiting for the synchronous result.
                 } catch(e) {
                     console.error(chalk.red(`[♥] Error en Heartbeat: ${e.message}`));
                     io.emit('system_error', `Error en Heartbeat Loop: ${e.message}`);
@@ -534,7 +562,8 @@ io.on('connection', (socket) => {
                 text: cmd,
                 channel: 'dashboard',
                 from: 'dashboard',
-                to: 'dashboard'
+                to: 'dashboard',
+                isCommand: cmd.toLowerCase().startsWith('!geist')
             });
 
             if (ingestResult.type === 'error' || ingestResult.type === 'text') {
