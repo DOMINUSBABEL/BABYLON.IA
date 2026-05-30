@@ -34,7 +34,11 @@ export const toolsDefinition = [
 export const executeTool = async (action, actionInput) => {
     try {
         if (action === "read_local_file") {
-            const resolvedPath = path.resolve(process.cwd(), actionInput);
+            const cwd = process.cwd();
+            const resolvedPath = path.resolve(cwd, actionInput);
+            if (resolvedPath !== cwd && !resolvedPath.startsWith(cwd + path.sep)) {
+                return `Error de Seguridad: Intento de acceso a ruta no autorizada fuera del workspace.`;
+            }
             if (fs.existsSync(resolvedPath)) {
                 return fs.readFileSync(resolvedPath, 'utf8');
             }
