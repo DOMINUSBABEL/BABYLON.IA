@@ -1,3 +1,19 @@
+
+// Helper to sanitize HTML to prevent XSS
+function escapeHTML(str) {
+    if (typeof str !== 'string') return str;
+    return str.replace(/[&<>'"]/g, function(tag) {
+        const charsToReplace = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+        };
+        return charsToReplace[tag] || tag;
+    });
+}
+
 const socket = io();
 
 // DOM Elements
@@ -169,7 +185,7 @@ function appendLog(msg, type = 'info') {
     }
 
     div.className = `${colorClass} animate-fade-in flex items-start gap-2 mb-1`;
-    div.innerHTML = `<span class="text-gray-600 text-[10px] mt-1 shrink-0">[${time}]</span> <div class="flex-1">${icon} ${msg}</div>`;
+    div.innerHTML = `<span class="text-gray-600 text-[10px] mt-1 shrink-0">[${time}]</span> <div class="flex-1">${icon} ${escapeHTML(msg)}</div>`;
     
     terminalOutput.appendChild(div);
     scrollToBottom(terminalOutput);
@@ -221,7 +237,7 @@ function appendReasoning(msg) {
     }
 
     div.className = `${styleClass} animate-fade-in text-sm font-medium shadow-sm`;
-    div.innerHTML = `<div class="flex items-start">${icon} <span class="flex-1">${msg}</span></div>`;
+    div.innerHTML = `<div class="flex items-start">${icon} <span class="flex-1">${escapeHTML(msg)}</span></div>`;
     
     reasoningOutput.appendChild(div);
     scrollToBottom(reasoningOutput);
@@ -503,8 +519,8 @@ function renderTreeItem(item, padding = 0) {
 
     let html = `<div class="cursor-pointer hover:bg-gray-800/80 p-1.5 rounded transition-colors text-xs truncate flex items-center ${isActive && !isDir ? 'text-primary-400 bg-gray-800/50 font-bold' : 'text-gray-400'}"
                      style="padding-left: ${padding * 12 + 6}px;"
-                     onclick="${isDir ? `toggleFolder('${item.path}')` : `loadWikiFile('${item.path}')`}">
-        ${icon} <span class="truncate" title="${item.name}">${item.name}</span>
+                     onclick="${isDir ? `toggleFolder('${escapeHTML(item.path.replace(/'/g, "\\'"))}')` : `loadWikiFile('${escapeHTML(item.path.replace(/'/g, "\\'"))}')`}">
+        ${icon} <span class="truncate" title="${escapeHTML(item.name)}">${escapeHTML(item.name)}</span>
     </div>`;
 
     if (isDir && item.isOpen && item.children) {

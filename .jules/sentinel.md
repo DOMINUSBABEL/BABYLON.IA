@@ -17,3 +17,8 @@
 **Vulnerability:** The functions in `src/jules_bridge.js` used `child_process.exec` with string interpolation to pass `prompt` and `sessionId` arguments from users into the shell. This exposed the application to command injection vulnerabilities, as an attacker could supply input with shell metacharacters.
 **Learning:** External inputs should never be interpolated into shell commands. Native functions like `child_process.exec` execute within a shell by default, which parses metacharacters.
 **Prevention:** Replaced `child_process.exec` with `child_process.execFile` and passed all command arguments via an array, which bypasses the shell parser and natively prevents command injection.
+
+## 2025-05-24 - [Cross-Site Scripting (XSS) via DOM Insertion]
+**Vulnerability:** In `public/app.js`, server-provided data such as log messages, reasoning outputs, and workspace tree node names were being directly interpolated into HTML template literals and assigned via `innerHTML`. This allowed an attacker to inject arbitrary scripts if they could manipulate server responses or workspace filenames.
+**Learning:** Bypassing standard DOM elements by setting `innerHTML` with unsanitized data from the server creates a high risk of XSS.
+**Prevention:** Implemented an `escapeHTML` helper function to replace sensitive HTML characters (`&`, `<`, `>`, `'`, `"`). Applied this helper to all untrusted data before interpolation, and additionally ensured single-quotes were properly escaped (`.replace(/'/g, "\\'")`) when formatting JavaScript strings inside HTML event attributes (`onclick`).
