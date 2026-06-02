@@ -110,8 +110,20 @@ export async function processTask(prompt, updateProgress) {
                     const geminiBin = process.platform === 'win32' ? 'gemini.cmd' : 'gemini';
 
                     let geminiProcess;
+
+                    // Validate activeModel to prevent command injection
+                    // Even though we pass arguments as array, preventing invalid characters is a defense-in-depth measure.
+                    // Especially important if we ever fallback to shell execution.
+                    if (!/^[a-zA-Z0-9.\-:]+$/.test(activeModel)) {
+                        throw new Error(`Invalid model name: ${activeModel}`);
+                    }
+
                     if (process.platform === 'win32') {
-                        geminiProcess = spawn(`${geminiBin} -m ${activeModel} -p . -o json`, { shell: true });
+                        // On Windows, use spawn with arguments array. Ensure gemini.cmd is executable directly without shell.
+                        // Since gemini.cmd is a batch script, Node's child_process.spawn does need shell:true or cross-env/cross-spawn to execute it.
+                        // However, using shell:true with array arguments still just joins them.
+                        // To be safe, we validate activeModel using regex first, and then pass as array.
+                        geminiProcess = spawn(geminiBin, ['-m', activeModel, '-p', '.', '-o', 'json'], { shell: true });
                     } else {
                         geminiProcess = spawn(geminiBin, ['-m', activeModel, '-p', '.', '-o', 'json']);
                     }
