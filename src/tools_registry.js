@@ -34,7 +34,11 @@ export const toolsDefinition = [
 export const executeTool = async (action, actionInput) => {
     try {
         if (action === "read_local_file") {
-            const resolvedPath = path.resolve(process.cwd(), actionInput);
+            const basePath = process.cwd();
+            const resolvedPath = path.resolve(basePath, actionInput);
+            if (resolvedPath !== basePath && !resolvedPath.startsWith(basePath + path.sep)) {
+                return `Error: Intento de acceso a ruta no autorizada detectado.`;
+            }
             if (fs.existsSync(resolvedPath)) {
                 return fs.readFileSync(resolvedPath, 'utf8');
             }
