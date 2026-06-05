@@ -2,7 +2,7 @@ import open from 'open';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 
 import { promises as fsPromises } from 'fs';
 
@@ -23,7 +23,18 @@ function openBrowser(url) {
             command = `xdg-open "${url}"`;
             break;
     }
-    exec(command, (err) => {
+    let args = [];
+    if (command.startsWith('open ')) {
+        args = [url];
+        command = 'open';
+    } else if (command.startsWith('start ')) {
+        args = ['/c', 'start', '""', url];
+        command = 'cmd.exe';
+    } else {
+        args = [url];
+        command = 'xdg-open';
+    }
+    execFile(command, args, (err) => {
         if (err) {
             console.error(`\nNo se pudo abrir el navegador automáticamente. Por favor abre la siguiente URL manualmente: ${url}`);
         }
