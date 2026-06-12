@@ -17,3 +17,8 @@
 **Vulnerability:** The functions in `src/jules_bridge.js` used `child_process.exec` with string interpolation to pass `prompt` and `sessionId` arguments from users into the shell. This exposed the application to command injection vulnerabilities, as an attacker could supply input with shell metacharacters.
 **Learning:** External inputs should never be interpolated into shell commands. Native functions like `child_process.exec` execute within a shell by default, which parses metacharacters.
 **Prevention:** Replaced `child_process.exec` with `child_process.execFile` and passed all command arguments via an array, which bypasses the shell parser and natively prevents command injection.
+
+## 2025-05-24 - [XSS via innerHTML in Frontend App]
+**Vulnerability:** In `public/app.js`, dynamically generated messages and filenames were being assigned directly to `innerHTML` without HTML escaping. This could allow execution of arbitrary JavaScript if a log message or a file within the workspace contained a malicious payload.
+**Learning:** All untrusted user or application state inserted directly into the DOM via `innerHTML` must be properly escaped, even in simple internal tools or dashboards. Using `textContent` is preferred, but when HTML formatting is required, an explicit HTML escape function is necessary.
+**Prevention:** Added an `escapeHTML` helper function and applied it to variables before injecting them into `innerHTML`.
