@@ -17,3 +17,13 @@
 **Vulnerability:** The functions in `src/jules_bridge.js` used `child_process.exec` with string interpolation to pass `prompt` and `sessionId` arguments from users into the shell. This exposed the application to command injection vulnerabilities, as an attacker could supply input with shell metacharacters.
 **Learning:** External inputs should never be interpolated into shell commands. Native functions like `child_process.exec` execute within a shell by default, which parses metacharacters.
 **Prevention:** Replaced `child_process.exec` with `child_process.execFile` and passed all command arguments via an array, which bypasses the shell parser and natively prevents command injection.
+
+## 2025-05-24 - [Command Injection via exec in Server Model Check]
+**Vulnerability:** The function `check_local_models` in `src/server.js` used `child_process.exec('ollama list', ...)` without explicit array arguments, utilizing the shell parser. While not directly vulnerable through interpolation here, standardizing on `execFile` prevents future developers from appending user input and introducing command injection.
+**Learning:** `exec` should be avoided completely in favor of `execFile`, even for static commands, to enforce a secure baseline and prevent "copy-paste" vulnerabilities when later modified to accept arguments.
+**Prevention:** Replaced `child_process.exec` with `child_process.execFile` and passed command arguments via an array.
+
+## 2025-05-24 - [Command Injection via exec in Auth Open Browser]
+**Vulnerability:** The function `openBrowser` in `src/auth.js` used `child_process.exec` with string interpolation to pass `url` arguments. This exposed the application to command injection vulnerabilities if a malicious URL is provided, as the `url` is concatenated directly into the shell command string (`open "${url}"` etc.).
+**Learning:** External inputs like URLs should never be interpolated into shell commands. Native functions like `child_process.exec` execute within a shell by default, which parses metacharacters. If using an external library for a task (like `open`), it's better to use it consistently rather than writing custom `exec`-based wrappers.
+**Prevention:** Replaced the custom `child_process.exec` wrapper with direct usage of the `open` library, which safely handles URLs across platforms without invoking shell execution with interpolated strings.
