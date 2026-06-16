@@ -34,7 +34,11 @@ export const toolsDefinition = [
 export const executeTool = async (action, actionInput) => {
     try {
         if (action === "read_local_file") {
-            const resolvedPath = path.resolve(process.cwd(), actionInput);
+            const baseDir = process.cwd();
+            const resolvedPath = path.resolve(baseDir, actionInput);
+            if (resolvedPath !== baseDir && !resolvedPath.startsWith(baseDir + path.sep)) {
+                return `Error: Acceso denegado a la ruta ${resolvedPath}.`;
+            }
             if (fs.existsSync(resolvedPath)) {
                 return fs.readFileSync(resolvedPath, 'utf8');
             }
