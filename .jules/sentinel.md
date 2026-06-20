@@ -17,3 +17,7 @@
 **Vulnerability:** The functions in `src/jules_bridge.js` used `child_process.exec` with string interpolation to pass `prompt` and `sessionId` arguments from users into the shell. This exposed the application to command injection vulnerabilities, as an attacker could supply input with shell metacharacters.
 **Learning:** External inputs should never be interpolated into shell commands. Native functions like `child_process.exec` execute within a shell by default, which parses metacharacters.
 **Prevention:** Replaced `child_process.exec` with `child_process.execFile` and passed all command arguments via an array, which bypasses the shell parser and natively prevents command injection.
+## 2026-06-20 - [Path Traversal in tools_registry.js read_local_file]
+**Vulnerability:** The `read_local_file` tool accepted an unsanitized `actionInput` which was passed directly to `path.resolve(process.cwd(), actionInput)`. Without checking directory boundaries, this allowed reading files outside the expected workspace via relative paths like `../../../../etc/passwd`.
+**Learning:** Tool actions receiving arbitrary input from LLMs/users must always validate that resolved paths do not escape the intended directory boundary.
+**Prevention:** Added strict directory boundary checking using `resolvedPath.startsWith(process.cwd() + path.sep)` to ensure file reads are confined to the intended workspace.
