@@ -17,3 +17,8 @@
 **Vulnerability:** The functions in `src/jules_bridge.js` used `child_process.exec` with string interpolation to pass `prompt` and `sessionId` arguments from users into the shell. This exposed the application to command injection vulnerabilities, as an attacker could supply input with shell metacharacters.
 **Learning:** External inputs should never be interpolated into shell commands. Native functions like `child_process.exec` execute within a shell by default, which parses metacharacters.
 **Prevention:** Replaced `child_process.exec` with `child_process.execFile` and passed all command arguments via an array, which bypasses the shell parser and natively prevents command injection.
+
+## 2025-05-24 - [Cross-Site Scripting (XSS) via Unsanitized innerHTML in WebSocket Event Handlers]
+**Vulnerability:** In `public/app.js`, data received over WebSockets (logs, reasoning outputs, and file tree names) was being injected directly into the DOM using `.innerHTML` without proper HTML escaping. This allowed Cross-Site Scripting (XSS) if malicious payloads were returned by the AI or present in file names.
+**Learning:** Any untrusted data or dynamically generated content injected via `.innerHTML` MUST be sanitized. Furthermore, when dynamically creating inline JavaScript event handlers (e.g., `onclick="loadWikiFile(...)"`), variables must be both JSON serialized (to prevent JavaScript syntax breakouts) and HTML escaped.
+**Prevention:** Added a global `escapeHTML` helper function and applied it consistently to all dynamic text insertions before they are assigned to `.innerHTML`.
