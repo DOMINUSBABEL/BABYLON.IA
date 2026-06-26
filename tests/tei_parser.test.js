@@ -1,11 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import path from 'path';
-import { TEIParser } from '../src/tei_parser.js';
+import { TeiPlugin } from '../src/plugins/TeiPlugin.js';
 import fs from 'fs';
 
-test('TEIParser correctly parses a mock XML-TEI string', (t) => {
-    const parser = new TEIParser();
+test('TeiPlugin correctly parses a mock XML-TEI string', (t) => {
+    const parser = new TeiPlugin();
     const xmlMock = `
     <TEI>
         <teiHeader>
