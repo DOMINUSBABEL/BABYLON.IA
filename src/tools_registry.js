@@ -35,6 +35,10 @@ export const executeTool = async (action, actionInput) => {
     try {
         if (action === "read_local_file") {
             const resolvedPath = path.resolve(process.cwd(), actionInput);
+            const safePath = resolvedPath === process.cwd() || resolvedPath.startsWith(process.cwd() + path.sep);
+            if (!safePath) {
+                return `Error: Acceso denegado. La ruta está fuera del directorio de trabajo.`;
+            }
             if (fs.existsSync(resolvedPath)) {
                 return fs.readFileSync(resolvedPath, 'utf8');
             }
