@@ -1,5 +1,14 @@
 const socket = io();
 
+function escapeHTML(str) {
+    if (typeof str !== 'string') return str;
+    return str.replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&#39;');
+}
+
 // DOM Elements
 const statusEl = document.getElementById('agent-status');
 const waStatusEl = document.getElementById('wa-status');
@@ -169,7 +178,8 @@ function appendLog(msg, type = 'info') {
     }
 
     div.className = `${colorClass} animate-fade-in flex items-start gap-2 mb-1`;
-    div.innerHTML = `<span class="text-gray-600 text-[10px] mt-1 shrink-0">[${time}]</span> <div class="flex-1">${icon} ${msg}</div>`;
+    const safeMsg = escapeHTML(msg);
+    div.innerHTML = `<span class="text-gray-600 text-[10px] mt-1 shrink-0">[${time}]</span> <div class="flex-1">${icon} ${safeMsg}</div>`;
     
     terminalOutput.appendChild(div);
     scrollToBottom(terminalOutput);
@@ -221,7 +231,8 @@ function appendReasoning(msg) {
     }
 
     div.className = `${styleClass} animate-fade-in text-sm font-medium shadow-sm`;
-    div.innerHTML = `<div class="flex items-start">${icon} <span class="flex-1">${msg}</span></div>`;
+    const safeMsg = escapeHTML(msg);
+    div.innerHTML = `<div class="flex items-start">${icon} <span class="flex-1">${safeMsg}</span></div>`;
     
     reasoningOutput.appendChild(div);
     scrollToBottom(reasoningOutput);
@@ -501,10 +512,13 @@ function renderTreeItem(item, padding = 0) {
 
     const paddingClass = `pl-${padding}`; // This doesn't work well with dynamic arbitrary values in JIT if not safe-listed, fallback to inline style
 
+    const safePath = escapeHTML(JSON.stringify(item.path));
+    const safeName = escapeHTML(item.name);
+
     let html = `<div class="cursor-pointer hover:bg-gray-800/80 p-1.5 rounded transition-colors text-xs truncate flex items-center ${isActive && !isDir ? 'text-primary-400 bg-gray-800/50 font-bold' : 'text-gray-400'}"
                      style="padding-left: ${padding * 12 + 6}px;"
-                     onclick="${isDir ? `toggleFolder('${item.path}')` : `loadWikiFile('${item.path}')`}">
-        ${icon} <span class="truncate" title="${item.name}">${item.name}</span>
+                     onclick='${isDir ? `toggleFolder(${safePath})` : `loadWikiFile(${safePath})`}'>
+        ${icon} <span class="truncate" title="${safeName}">${safeName}</span>
     </div>`;
 
     if (isDir && item.isOpen && item.children) {
