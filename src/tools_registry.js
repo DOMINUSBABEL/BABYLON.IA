@@ -35,6 +35,10 @@ export const executeTool = async (action, actionInput) => {
     try {
         if (action === "read_local_file") {
             const resolvedPath = path.resolve(process.cwd(), actionInput);
+            // Sentinel: Fix path traversal vulnerability by strictly validating directory boundaries
+            if (resolvedPath !== process.cwd() && !resolvedPath.startsWith(process.cwd() + path.sep)) {
+                return `Error: Intento de acceso a ruta no autorizada detectado.`;
+            }
             if (fs.existsSync(resolvedPath)) {
                 return fs.readFileSync(resolvedPath, 'utf8');
             }
