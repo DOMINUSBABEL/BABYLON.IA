@@ -18,6 +18,11 @@
 **Learning:** External inputs should never be interpolated into shell commands. Native functions like `child_process.exec` execute within a shell by default, which parses metacharacters.
 **Prevention:** Replaced `child_process.exec` with `child_process.execFile` and passed all command arguments via an array, which bypasses the shell parser and natively prevents command injection.
 
+## 2025-05-24 - [Cross-Site Scripting (XSS) via Unsanitized innerHTML in WebSocket Event Handlers]
+**Vulnerability:** In `public/app.js`, data received over WebSockets (logs, reasoning outputs, and file tree names) was being injected directly into the DOM using `.innerHTML` without proper HTML escaping. This allowed Cross-Site Scripting (XSS) if malicious payloads were returned by the AI or present in file names.
+**Learning:** Any untrusted data or dynamically generated content injected via `.innerHTML` MUST be sanitized. Furthermore, when dynamically creating inline JavaScript event handlers (e.g., `onclick="loadWikiFile(...)"`), variables must be both JSON serialized (to prevent JavaScript syntax breakouts) and HTML escaped.
+**Prevention:** Added a global `escapeHTML` helper function and applied it consistently to all dynamic text insertions before they are assigned to `.innerHTML`.
+
 ## 2025-05-24 - [Command Injection via exec in Server Model Check]
 **Vulnerability:** The function `check_local_models` in `src/server.js` used `child_process.exec('ollama list', ...)` without explicit array arguments, utilizing the shell parser. While not directly vulnerable through interpolation here, standardizing on `execFile` prevents future developers from appending user input and introducing command injection.
 **Learning:** `exec` should be avoided completely in favor of `execFile`, even for static commands, to enforce a secure baseline and prevent "copy-paste" vulnerabilities when later modified to accept arguments.
@@ -30,5 +35,5 @@
 
 ## 2026-06-13 - [Path Traversal via Untrusted LLM Action Input]
 **Vulnerability:** The `read_local_file` action in `src/tools_registry.js` dynamically resolved file paths provided by the LLM (`actionInput`) relative to the current working directory without validating boundaries. This opened the system up to path traversal. An attacker could use indirect prompt injection (e.g., through a scraped webpage or a maliciously crafted message) to force the LLM to output a path like `../../../../etc/passwd`, allowing unauthorized read access to system files.
-**Learning:** LLM tool/action inputs must be treated as completely untrusted and strictly validated. Security boundaries should exist not just at the user interface, but also around internal APIs exposed to the LLM agent.
+**Learning:** LLM tool/action inputs must be treated as completely untrusted and strictly validated. Security boundaries should exist not just at the set of user interfaces, but also around internal APIs exposed to the LLM agent.
 **Prevention:** Implemented strict directory boundary validation in `read_local_file` to ensure `resolvedPath` exactly equals or starts with the expected base directory plus a path separator (`process.cwd() + path.sep`), blocking attempts to navigate outside the intended scope.

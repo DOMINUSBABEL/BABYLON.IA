@@ -1,5 +1,15 @@
 const socket = io();
 
+// Utilidades de Seguridad
+function escapeHTML(str) {
+    if (typeof str !== 'string') return String(str);
+    return str.replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;")
+              .replace(/"/g, "&quot;")
+              .replace(/'/g, "&#039;");
+}
+
 // DOM Elements
 const statusEl = document.getElementById('agent-status');
 const waStatusEl = document.getElementById('wa-status');
@@ -115,7 +125,7 @@ function updateSyntaxHighlighting(filename) {
 
     // Escape HTML from textarea content so it renders correctly in code block
     let content = contextEditor.value;
-    content = content.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    content = escapeHTML(content);
 
     // Add empty space at end to allow scrolling past last line if needed
     if (content.endsWith('\n')) content += ' ';
@@ -153,6 +163,7 @@ function appendLog(msg, type = 'info') {
     if (!terminalOutput) return;
     const div = document.createElement('div');
     const time = new Date().toLocaleTimeString();
+    const safeMsg = escapeHTML(msg);
     
     let colorClass = 'text-gray-300';
     let icon = '<i class="fa-solid fa-angle-right text-gray-500 mr-2"></i>';
@@ -169,7 +180,7 @@ function appendLog(msg, type = 'info') {
     }
 
     div.className = `${colorClass} animate-fade-in flex items-start gap-2 mb-1`;
-    div.innerHTML = `<span class="text-gray-600 text-[10px] mt-1 shrink-0">[${time}]</span> <div class="flex-1">${icon} ${msg}</div>`;
+    div.innerHTML = `<span class="text-gray-600 text-[10px] mt-1 shrink-0">[${time}]</span> <div class="flex-1">${icon} ${safeMsg}</div>`;
     
     terminalOutput.appendChild(div);
     scrollToBottom(terminalOutput);
@@ -184,6 +195,7 @@ function appendReasoning(msg) {
     }
 
     const div = document.createElement('div');
+    const safeMsg = escapeHTML(msg);
     
     let styleClass = 'text-gray-300 border-l-2 border-gray-700 pl-3 py-1';
     let icon = '<i class="fa-solid fa-bolt text-primary-500 mr-2"></i>';
@@ -221,7 +233,7 @@ function appendReasoning(msg) {
     }
 
     div.className = `${styleClass} animate-fade-in text-sm font-medium shadow-sm`;
-    div.innerHTML = `<div class="flex items-start">${icon} <span class="flex-1">${msg}</span></div>`;
+    div.innerHTML = `<div class="flex items-start">${icon} <span class="flex-1">${safeMsg}</span></div>`;
     
     reasoningOutput.appendChild(div);
     scrollToBottom(reasoningOutput);
@@ -501,10 +513,13 @@ function renderTreeItem(item, padding = 0) {
 
     const paddingClass = `pl-${padding}`; // This doesn't work well with dynamic arbitrary values in JIT if not safe-listed, fallback to inline style
 
+    const safeName = escapeHTML(item.name);
+    const safePath = escapeHTML(JSON.stringify(item.path));
+
     let html = `<div class="cursor-pointer hover:bg-gray-800/80 p-1.5 rounded transition-colors text-xs truncate flex items-center ${isActive && !isDir ? 'text-primary-400 bg-gray-800/50 font-bold' : 'text-gray-400'}"
                      style="padding-left: ${padding * 12 + 6}px;"
-                     onclick="${isDir ? `toggleFolder('${item.path}')` : `loadWikiFile('${item.path}')`}">
-        ${icon} <span class="truncate" title="${item.name}">${item.name}</span>
+                     onclick="${isDir ? `toggleFolder(${safePath})` : `loadWikiFile(${safePath})`}">
+        ${icon} <span class="truncate" title="${safeName}">${safeName}</span>
     </div>`;
 
     if (isDir && item.isOpen && item.children) {
