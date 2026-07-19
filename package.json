@@ -27,7 +27,7 @@
     "discord.js": "^14.26.2",
     "dotenv": "^17.4.1",
     "express": "^5.2.1",
-    "fast-xml-parser": "^5.5.10",
+    "fast-xml-parser": "^5.10.1",
     "figlet": "^1.7.0",
     "gradient-string": "^2.0.2",
     "log-update": "^8.0.0",
