@@ -111,7 +111,8 @@ export async function processTask(prompt, updateProgress) {
 
                     let geminiProcess;
                     if (process.platform === 'win32') {
-                        geminiProcess = spawn(`${geminiBin} -m ${activeModel} -p . -o json`, { shell: true });
+                        // Prevent command injection by avoiding string interpolation
+                        geminiProcess = spawn(geminiBin, ['-m', activeModel, '-p', '.', '-o', 'json'], { shell: true });
                     } else {
                         geminiProcess = spawn(geminiBin, ['-m', activeModel, '-p', '.', '-o', 'json']);
                     }
