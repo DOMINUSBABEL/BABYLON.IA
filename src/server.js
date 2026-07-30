@@ -34,6 +34,12 @@ const io = new Server(server);
 const PORT = process.env.PORT || 3000;
 
 // Configurar Express para servir archivos estáticos (Dashboard Web)
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    next();
+});
 app.use(express.static(path.join(rootDir, 'public')));
 app.use(express.json());
 
